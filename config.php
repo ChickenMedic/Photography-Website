@@ -2,8 +2,8 @@
 // config.php
 // Database Configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root'); // Change for production
-define('DB_PASS', '');     // Change for production
+define('DB_USER', 'SDawson-admin'); // Change for production
+define('DB_PASS', 'LeicaWreckingBall2026!@#');     // Change for production
 define('DB_NAME', 'personal_portfolio');
 
 // Establish Database Connection using PDO
