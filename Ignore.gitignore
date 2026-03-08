@@ -1,0 +1,14 @@
+# Ignore the uploads folder (keep the structure, ignore the images)
+/uploads/*
+!/uploads/index.php
+!/uploads/.keep
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore Mac OS hidden files
+.DS_Store
+
+# (Optional) Ignore config file if it has production database passwords
+# config.php 
