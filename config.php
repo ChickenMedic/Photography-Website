@@ -1,9 +1,16 @@
 <?php
 // config.php
-// Database Configuration
+// Environment Detection
+$isLocalhost = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1');
+
+if ($isLocalhost) {
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+} else {
+    define('DB_USER', 'SDawson-admin');
+    define('DB_PASS', 'LeicaWreckingBall2026!@#');
+}
 define('DB_HOST', 'localhost');
-define('DB_USER', 'SDawson-admin'); // Change for production
-define('DB_PASS', 'LeicaWreckingBall2026!@#');     // Change for production
 define('DB_NAME', 'personal_portfolio');
 
 // Establish Database Connection using PDO

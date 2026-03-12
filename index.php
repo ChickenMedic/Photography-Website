@@ -14,36 +14,50 @@ $stmtProjects = $pdo->query("SELECT * FROM projects ORDER BY created_at DESC");
 $projects = $stmtProjects->fetchAll(PDO::FETCH_ASSOC);
 
 $photoQuotes = [
-    "Photography takes an instant out of time, altering life by holding it still.",
-    "The world is a canvas to the imagination.",
-    "To travel is to discover that everyone is wrong about other countries.",
-    "A camera is a save button for the mind's eye.",
-    "Wandering through cities, discovering new perspectives.",
-    "You don't take a photograph, you make it.",
-    "Photography is the story I fail to put into words.",
-    "Look and think before opening the shutter. The heart and mind are the true lens of the camera.",
-    "A good photograph is one that communicates a fact, touches the heart.",
-    "There are no bad pictures; that's just how your face looks sometimes.",
-    "If your pictures aren't good enough, you aren't close enough.",
-    "The painter constructs, the photographer discloses.",
-    "Photography is a way of feeling, of touching, of loving.",
-    "What I like about photographs is that they capture a moment that's gone forever.",
-    "A tear contains an ocean. A photographer is aware of the tiny moments in a person's life.",
-    "We are making photographs to understand what our lives mean to us.",
-    "The eye should learn to listen before it looks.",
-    "Only photograph what you love.",
-    "The best thing about a picture is that it never changes, even when the people in it do.",
-    "To me, photography is an art of observation.",
-    "Skill in photography is acquired by practice and not by purchase.",
-    "There is one thing the photograph must contain, the humanity of the moment.",
-    "Taking pictures is savouring life intensely, every hundredth of a second.",
-    "Your first 10,000 photographs are your worst.",
-    "Photography is truth. The cinema is truth twenty-four times per second.",
-    "When words become unclear, I shall focus with photographs.",
-    "God creates the beauty. My camera and I are a witness.",
-    "Every viewer is going to get a different thing. That’s the thing about painting, photography.",
-    "I walk, I look, I see, I stop, I photograph.",
-    "Great photography is about depth of feeling, not depth of field."
+    "To me, photography is an art of observation. It's about finding something interesting in an ordinary place.|Elliott Erwitt",
+    "Your first 10,000 photographs are your worst.|Henri Cartier-Bresson",
+    "There are no rules for good photographs, there are only good photographs.|Ansel Adams",
+    "Photography is the story I fail to put into words.|Destin Sparks",
+    "If your pictures aren't good enough, you aren't close enough.|Robert Capa",
+    "You don't take a photograph, you make it.|Ansel Adams",
+    "The camera is an instrument that teaches people how to see without a camera.|Dorothea Lange",
+    "A tear contains an ocean. A photographer is aware of the tiny moments in a person's life.|Robert Frank",
+    "It is an illusion that photos are made with the camera... they are made with the eye, heart and head.|Henri Cartier-Bresson",
+    "The best thing about a picture is that it never changes, even when the people in it do.|Andy Warhol",
+    "Photography is a way of feeling, of touching, of loving.|Aaron Siskind",
+    "A good photograph is one that communicates a fact, touches the heart and leaves the viewer a changed person.|Irving Penn",
+    "Photography takes an instant out of time, altering life by holding it still.|Dorothea Lange",
+    "I never have taken a picture I've intended. They're always better or worse.|Diane Arbus",
+    "When words become unclear, I shall focus with photographs. When images become inadequate, I shall be content with silence.|Ansel Adams",
+    "To photograph is to hold one's breath, when all faculties converge to capture fleeting reality.|Henri Cartier-Bresson",
+    "The eye should learn to listen before it looks.|Robert Frank",
+    "A camera is a tool for learning how to see without a camera.|Dorothea Lange",
+    "Look and think before opening the shutter. The heart and mind are the true lens of the camera.|Yousuf Karsh",
+    "Which of my photographs is my favorite? The one I’m going to take tomorrow.|Imogen Cunningham",
+    "I walk, I look, I see, I stop, I photograph.|Leon Levinstein",
+    "Character, like a photograph, develops in darkness.|Yousuf Karsh",
+    "A portrait is not made in the camera but on either side of it.|Edward Steichen",
+    "Great photography is about depth of feeling, not depth of field.|Peter Adams",
+    "There is one thing the photograph must contain, the humanity of the moment.|Robert Frank",
+    "Taking pictures is savoring life intensely, every hundredth of a second.|Marc Riboud",
+    "The painter constructs, the photographer discloses.|Susan Sontag",
+    "To consult the rules of composition before making a picture is a little like consulting the law of gravitation before going for a walk.|Edward Weston",
+    "We are making photographs to understand what our lives mean to us.|Ralph Hattersley",
+    "Photography for me is not looking, it's feeling.|Don McCullin",
+    "To me, photography is the simultaneous recognition, in a fraction of a second, of the significance of an event.|Henri Cartier-Bresson",
+    "You just have to live and life will give you pictures.|Henri Cartier-Bresson",
+    "Of all the means of expression, photography is the only one that fixes a precise moment in time.|Henri Cartier-Bresson",
+    "A photograph is neither taken or seized by force. It offers itself up.|Henri Cartier-Bresson",
+    "In photography, the smallest thing can be a great subject.|Henri Cartier-Bresson",
+    "The camera is an extension of the eye.|Henri Cartier-Bresson",
+    "For me, the camera is a sketch book, an instrument of intuition and spontaneity.|Henri Cartier-Bresson",
+    "A good photograph is knowing where to stand.|Ansel Adams",
+    "Landscape photography is the supreme test of the photographer.|Ansel Adams",
+    "Sometimes I do get to places just when God's ready to have somebody click the shutter.|Ansel Adams",
+    "A great photograph is one that fully expresses what one feels, in the deepest sense, about what is being photographed.|Ansel Adams",
+    "There is nothing worse than a sharp image of a fuzzy concept.|Ansel Adams",
+    "You don't make a photograph just with a camera. You bring to the act of photography all the pictures you have seen, the books you have read, the music you have heard, the people you have loved.|Ansel Adams",
+    "To the complaint, 'There are no people in these photographs,' I respond, 'There are always two people: the photographer and the viewer.'|Ansel Adams"
 ];
 ?>
 <!DOCTYPE html>
@@ -55,7 +69,7 @@ $photoQuotes = [
     <!-- Google Fonts for typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&family=Playfair+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Cinzel&family=Dancing+Script&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&family=Playfair+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Cinzel&family=Dancing+Script&family=Great+Vibes&family=Oswald:wght@500;700&family=Roboto+Mono:wght@400;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Lora:ital@0;1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -80,11 +94,29 @@ $photoQuotes = [
             <div class="hero-slide" style="background-image: url('assets/img/vienna.jpg');"></div>
             <div class="hero-slide" style="background-image: url('assets/img/sicily.jpg');"></div>
             <div class="hero-slide" style="background-image: url('assets/img/paris.jpg');"></div>
-            <div class="hero-overlay"></div>
+            
+            <!-- Floating Shapes Background -->
+            <div class="shapes-container">
+                <div class="shape circle shape-1"></div>
+                <div class="shape triangle shape-2"></div>
+                <div class="shape square shape-3"></div>
+                <div class="shape circle shape-4"></div>
+                <div class="shape triangle shape-5"></div>
+                <div class="shape circle shape-6"></div>
+            </div>
+            
+            <div class="gradient-overlay"></div>
         </div>
         <div class="hero-content">
-            <h1 class="animate-up">Sam Dawson</h1>
-            <p class="subtitle animate-up delay-1" id="dynamic-quote">Capturing light, shadows, and everything in between.</p>
+            <h1 class="animate-up" id="dynamic-name">
+                <span class="letter-span" style="font-family: 'Outfit', sans-serif;">S</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">m</span>
+                <span class="letter-span" style="font-family: 'Outfit', sans-serif;">&nbsp;</span>
+                <span class="letter-span" style="font-family: 'Outfit', sans-serif;">D</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">w</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">s</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">o</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">n</span>
+            </h1>
+            <p class="subtitle animate-up delay-1" id="dynamic-quote-container">
+                <span id="dynamic-quote-text">"Capturing light, shadows, and everything in between."</span><br>
+                <span id="dynamic-quote-author" class="quote-author">Sam Dawson</span>
+            </p>
         </div>
         <div class="scroll-indicator animate-up delay-2">
             <span>Scroll</span>
@@ -97,6 +129,12 @@ $photoQuotes = [
         <div class="container section-header" style="display: flex; align-items: center; gap: 30px;">
             <h2 class="fade-in">Selected Works</h2>
             <button id="random-pic-btn" class="btn-primary fade-in" style="padding: 10px 20px; font-size: 0.9rem;">Surprise Me</button>
+        </div>
+        
+        <div class="container fade-in">
+            <div id="featured-slideshow" class="featured-slideshow">
+                <div id="featured-slideshow-inner" class="featured-slideshow-inner"></div>
+            </div>
         </div>
         
         <?php if (empty($locations) && empty($photos)): ?>
@@ -158,7 +196,7 @@ $photoQuotes = [
                         
                         <div class="overlay">
                             <div class="overlay-content">
-                                <h3 class="photo-quote">"<?php echo h($photoQuotes[array_rand($photoQuotes)]); ?>"</h3>
+                                <h3><?php echo h($photo['title'] ?: 'Untitled'); ?></h3>
                             </div>
                         </div>
                     </div>
@@ -253,7 +291,6 @@ $photoQuotes = [
 
     <script>
         const allPhotosDB = <?php echo json_encode($photos); ?>;
-        const photoQuotes = <?php echo json_encode($photoQuotes); ?>;
     </script>
     <script src="assets/js/main.js"></script>
 </body>

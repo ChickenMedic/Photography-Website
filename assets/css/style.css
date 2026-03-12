@@ -200,12 +200,141 @@ img {
     z-index: 1;
 }
 
-.hero-overlay {
+.shapes-container {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(10, 10, 10, 0.3) 0%, rgba(10, 10, 10, 0.8) 100%),
-        radial-gradient(circle at center, rgba(0, 0, 0, 0.2) 0%, rgba(10, 10, 10, 0.6) 100%);
+    overflow: hidden;
+    z-index: 1;
+}
+
+.shape {
+    position: absolute;
+    filter: blur(40px);
+    opacity: 0.6;
+    animation: floatShape 20s infinite ease-in-out alternate;
+    mix-blend-mode: screen;
+}
+
+.circle {
+    border-radius: 50%;
+}
+
+.square {
+    border-radius: 20px;
+}
+
+.triangle {
+    width: 0;
+    height: 0;
+    background: transparent !important;
+    border-left: 150px solid transparent;
+    border-right: 150px solid transparent;
+    border-bottom: 250px solid var(--shape-color);
+}
+
+.shape-1 {
+    width: 300px; height: 300px;
+    background: #be185d;
+    top: 10%; left: 10%;
+    animation-delay: 0s;
+    --tx: 50vw; --ty: 40vh;
+}
+.shape-2 {
+    --shape-color: #1e3a8a;
+    top: 60%; left: 20%;
+    animation-delay: -5s;
+    animation-duration: 25s;
+    --tx: 30vw; --ty: -50vh;
+}
+.shape-3 {
+    width: 250px; height: 250px;
+    background: #7e22ce;
+    top: 20%; right: 15%;
+    animation-delay: -10s;
+    animation-duration: 22s;
+    border-radius: 10%;
+    transform: rotate(45deg);
+    --tx: -50vw; --ty: 30vh;
+}
+.shape-4 {
+    width: 400px; height: 400px;
+    background: #b45309;
+    bottom: -10%; right: -5%;
+    animation-delay: -15s;
+    animation-duration: 30s;
+    --tx: -40vw; --ty: -40vh;
+}
+.shape-5 {
+    --shape-color: #db2777;
+    top: 40%; left: 50%;
+    animation-delay: -8s;
+    animation-duration: 18s;
+    --tx: 60vw; --ty: -20vh;
+}
+.shape-6 {
+    width: 200px; height: 200px;
+    background: #4338ca;
+    bottom: 20%; left: 40%;
+    animation-delay: -2s;
+    --tx: -30vw; --ty: -60vh;
+}
+
+@keyframes floatShape {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        filter: blur(40px);
+        opacity: 0.5;
+    }
+    33% {
+        transform: translate(calc(var(--tx, 50vw) * 0.33), calc(var(--ty, -50vh) * 0.33)) scale(1.2) rotate(30deg);
+        filter: blur(60px);
+        opacity: 0.8;
+    }
+    60% {
+        /* "Closer" crisp state */
+        transform: translate(calc(var(--tx, 50vw) * 0.6), calc(var(--ty, -50vh) * 0.6)) scale(1.8) rotate(60deg);
+        filter: blur(2px);
+        opacity: 0.95;
+    }
+    100% {
+        transform: translate(var(--tx, 50vw), var(--ty, -50vh)) scale(1.5) rotate(90deg);
+        filter: blur(50px);
+        opacity: 0.9;
+    }
+}
+
+.gradient-overlay {
+    position: absolute;
+    inset: 0;
+    /* Initial fallback */
+    background: rgba(10, 10, 10, 0.4);
+    animation: primaryFlow 30s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
     z-index: 2;
+    mix-blend-mode: soft-light;
+}
+
+@keyframes primaryFlow {
+    0% { background: rgba(220, 38, 38, 0.6); } /* Primary Red */
+    20% { background: rgba(217, 70, 239, 0.5); } /* Random Fuchsia Transition */
+    40% { background: rgba(37, 99, 235, 0.6); } /* Primary Blue */
+    60% { background: rgba(16, 185, 129, 0.5); } /* Random Emerald Transition */
+    80% { background: rgba(245, 158, 11, 0.6); } /* Primary Yellow/Amber */
+    100% { background: rgba(239, 68, 68, 0.6); } /* Back to Red */
+}
+
+.gradient-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(10, 10, 10, 0.3) 0%, rgba(10, 10, 10, 0.95) 100%);
+    z-index: 3;
+}
+
+.letter-span {
+    display: inline-block;
+    width: 0.85em; /* Buffer width to prevent jerky layout */
+    text-align: center;
+    transition: all 0.5s ease;
 }
 
 .hero-content {
@@ -230,14 +359,30 @@ img {
     font-size: clamp(1.2rem, 2vw, 1.5rem);
     color: var(--text-secondary);
     font-weight: 300;
-    max-width: 600px;
+    max-width: 800px;
     margin: 0 auto;
-    transition: opacity 0.8s ease, font-family 0.8s ease;
+    transition: opacity 0.8s ease;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 .hero .subtitle.fade-out {
     opacity: 0;
+}
+
+#dynamic-quote-text {
+    transition: font-family 0.8s ease;
+}
+
+.quote-author {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent);
+    font-weight: 500;
+    font-family: 'Inter', sans-serif; /* Keep author font clean and legible */
+    opacity: 0.8;
+    margin-top: 15px;
+    display: inline-block;
 }
 
 .scroll-indicator {
@@ -799,6 +944,108 @@ img {
     transform: scale(0.95);
     transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
+
+/* Featured Slideshow Styles */
+.featured-slideshow {
+    width: 100%;
+    height: 60vh;
+    min-height: 400px;
+    background: #111;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 60px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.featured-slideshow-inner {
+    position: absolute;
+    inset: 0;
+}
+
+.slideshow-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    visibility: hidden;
+    will-change: transform, opacity, filter;
+}
+
+.slideshow-img.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 5;
+}
+
+.slideshow-img.incoming {
+    z-index: 6;
+}
+
+/* 20 Transition Animations */
+/* 1. Fade In */
+.fx-fade-in { animation: fxFadeIn 1.5s ease forwards; }
+@keyframes fxFadeIn { from { opacity: 0; } to { opacity: 1; visibility: visible; } }
+/* 2. Slide Left */
+.fx-slide-left { animation: fxSlideLeft 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSlideLeft { from { transform: translateX(100%); opacity: 1; } to { transform: translateX(0); opacity: 1; visibility: visible; } }
+/* 3. Slide Right */
+.fx-slide-right { animation: fxSlideRight 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSlideRight { from { transform: translateX(-100%); opacity: 1; } to { transform: translateX(0); opacity: 1; visibility: visible; } }
+/* 4. Slide Up */
+.fx-slide-up { animation: fxSlideUp 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSlideUp { from { transform: translateY(100%); opacity: 1; } to { transform: translateY(0); opacity: 1; visibility: visible; } }
+/* 5. Slide Down */
+.fx-slide-down { animation: fxSlideDown 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSlideDown { from { transform: translateY(-100%); opacity: 1; } to { transform: translateY(0); opacity: 1; visibility: visible; } }
+/* 6. Zoom In */
+.fx-zoom-in { animation: fxZoomIn 1.5s ease forwards; }
+@keyframes fxZoomIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; visibility: visible; } }
+/* 7. Zoom Out */
+.fx-zoom-out { animation: fxZoomOut 1.5s ease forwards; }
+@keyframes fxZoomOut { from { transform: scale(1.5); opacity: 0; } to { transform: scale(1); opacity: 1; visibility: visible; } }
+/* 8. Rotate Zoom */
+.fx-rotate-zoom { animation: fxRotateZoom 1.5s ease forwards; }
+@keyframes fxRotateZoom { from { transform: scale(0.5) rotate(-15deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; visibility: visible; } }
+/* 9. Flip X */
+.fx-flip-x { animation: fxFlipX 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; backface-visibility: hidden; }
+@keyframes fxFlipX { from { transform: perspective(1000px) rotateX(90deg); opacity: 0; } to { transform: perspective(1000px) rotateX(0deg); opacity: 1; visibility: visible; } }
+/* 10. Flip Y */
+.fx-flip-y { animation: fxFlipY 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; backface-visibility: hidden; }
+@keyframes fxFlipY { from { transform: perspective(1000px) rotateY(90deg); opacity: 0; } to { transform: perspective(1000px) rotateY(0deg); opacity: 1; visibility: visible; } }
+/* 11. Blur In */
+.fx-blur-in { animation: fxBlurIn 1.5s ease forwards; }
+@keyframes fxBlurIn { from { filter: blur(20px); opacity: 0; } to { filter: blur(0); opacity: 1; visibility: visible; } }
+/* 12. Drop In */
+.fx-drop-in { animation: fxDropIn 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+@keyframes fxDropIn { from { transform: translateY(-100px) scale(1.1); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; visibility: visible; } }
+/* 13. Spin In */
+.fx-spin-in { animation: fxSpinIn 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSpinIn { from { transform: rotate(180deg) scale(0); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; visibility: visible; } }
+/* 14. Skew Left */
+.fx-skew-left { animation: fxSkewLeft 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSkewLeft { from { transform: translateX(100%) skewX(-30deg); opacity: 1; } to { transform: translateX(0) skewX(0); opacity: 1; visibility: visible; } }
+/* 15. Skew Right */
+.fx-skew-right { animation: fxSkewRight 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSkewRight { from { transform: translateX(-100%) skewX(30deg); opacity: 1; } to { transform: translateX(0) skewX(0); opacity: 1; visibility: visible; } }
+/* 16. Fold Top */
+.fx-fold-top { animation: fxFoldTop 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; transform-origin: top; }
+@keyframes fxFoldTop { from { transform: perspective(1000px) rotateX(-90deg); opacity: 0; } to { transform: perspective(1000px) rotateX(0deg); opacity: 1; visibility: visible; } }
+/* 17. Fold Bottom */
+.fx-fold-bottom { animation: fxFoldBottom 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; transform-origin: bottom; }
+@keyframes fxFoldBottom { from { transform: perspective(1000px) rotateX(90deg); opacity: 0; } to { transform: perspective(1000px) rotateX(0deg); opacity: 1; visibility: visible; } }
+/* 18. Slide Down Zoom */
+.fx-slide-down-zoom { animation: fxSlideDownZoom 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSlideDownZoom { from { transform: translateY(-50%) scale(1.2); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; visibility: visible; } }
+/* 19. Squeeze */
+.fx-squeeze { animation: fxSqueeze 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxSqueeze { from { transform: scaleX(0.1); opacity: 0; } to { transform: scaleX(1); opacity: 1; visibility: visible; } }
+/* 20. Expand */
+.fx-expand { animation: fxExpand 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes fxExpand { from { transform: scaleY(0.1); opacity: 0; } to { transform: scaleY(1); opacity: 1; visibility: visible; } }
+
 
 .lightbox.active .lightbox-content img {
     transform: scale(1);

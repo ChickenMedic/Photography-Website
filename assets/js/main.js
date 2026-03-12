@@ -91,49 +91,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Hero Slider & Dynamic Quotes
     const heroSlides = document.querySelectorAll('.hero-slide');
-    const dynamicQuote = document.getElementById('dynamic-quote');
+    const dynamicQuoteContainer = document.getElementById('dynamic-quote-container');
+    const dynamicQuoteText = document.getElementById('dynamic-quote-text');
+    const dynamicQuoteAuthor = document.getElementById('dynamic-quote-author');
+    
+    // Set initial name font immediately
+    const INITIAL_NAME_FONT = "'Outfit', sans-serif";
+    const letterSpans = document.querySelectorAll('.letter-span');
+    letterSpans.forEach(span => {
+        span.style.fontFamily = INITIAL_NAME_FONT;
+    });
 
-    if (heroSlides.length > 0 && dynamicQuote) {
+    if (heroSlides.length > 0 && dynamicQuoteContainer) {
         const quotes = [
-            "Capturing light, shadows, and everything in between.",
-            "Photography takes an instant out of time, altering life by holding it still.",
-            "The world is a canvas to the imagination.",
-            "To travel is to discover that everyone is wrong about other countries.",
-            "A camera is a save button for the mind's eye.",
-            "Wandering through cities, discovering new perspectives."
+            "To me, photography is an art of observation. It's about finding something interesting in an ordinary place.|Elliott Erwitt",
+            "Your first 10,000 photographs are your worst.|Henri Cartier-Bresson",
+            "There are no rules for good photographs, there are only good photographs.|Ansel Adams",
+            "Photography is the story I fail to put into words.|Destin Sparks",
+            "If your pictures aren't good enough, you aren't close enough.|Robert Capa",
+            "You don't take a photograph, you make it.|Ansel Adams",
+            "The camera is an instrument that teaches people how to see without a camera.|Dorothea Lange",
+            "A tear contains an ocean. A photographer is aware of the tiny moments in a person's life.|Robert Frank",
+            "It is an illusion that photos are made with the camera... they are made with the eye, heart and head.|Henri Cartier-Bresson",
+            "The best thing about a picture is that it never changes, even when the people in it do.|Andy Warhol",
+            "Photography is a way of feeling, of touching, of loving.|Aaron Siskind",
+            "A good photograph is one that communicates a fact, touches the heart and leaves the viewer a changed person.|Irving Penn",
+            "Photography takes an instant out of time, altering life by holding it still.|Dorothea Lange",
+            "I never have taken a picture I've intended. They're always better or worse.|Diane Arbus",
+            "When words become unclear, I shall focus with photographs. When images become inadequate, I shall be content with silence.|Ansel Adams",
+            "To photograph is to hold one's breath, when all faculties converge to capture fleeting reality.|Henri Cartier-Bresson",
+            "The eye should learn to listen before it looks.|Robert Frank",
+            "A camera is a tool for learning how to see without a camera.|Dorothea Lange",
+            "Look and think before opening the shutter. The heart and mind are the true lens of the camera.|Yousuf Karsh",
+            "Which of my photographs is my favorite? The one I’m going to take tomorrow.|Imogen Cunningham",
+            "I walk, I look, I see, I stop, I photograph.|Leon Levinstein",
+            "Character, like a photograph, develops in darkness.|Yousuf Karsh",
+            "A portrait is not made in the camera but on either side of it.|Edward Steichen",
+            "Great photography is about depth of feeling, not depth of field.|Peter Adams",
+            "There is one thing the photograph must contain, the humanity of the moment.|Robert Frank",
+            "Taking pictures is savoring life intensely, every hundredth of a second.|Marc Riboud",
+            "The painter constructs, the photographer discloses.|Susan Sontag",
+            "To consult the rules of composition before making a picture is a little like consulting the law of gravitation before going for a walk.|Edward Weston",
+            "We are making photographs to understand what our lives mean to us.|Ralph Hattersley",
+            "Photography for me is not looking, it's feeling.|Don McCullin"
         ];
 
-        const fonts = [
+        // Readable, strong styling fonts for quotes
+        const readableFonts = [
+            "'Inter', sans-serif",
+            "'Oswald', sans-serif",
+            "'Roboto Mono', monospace",
+            "'Permanent Marker', cursive", // Graffiti style
+            "'Playfair Display', serif",
+            "'Lora', serif",
+            "'Anton', sans-serif", // Block style
+            "'Bebas Neue', sans-serif" // Block style
+        ];
+
+        // All fonts for the name letters (kept wilder)
+        const nameFonts = [
             "'Inter', sans-serif",
             "'Playfair Display', serif",
             "'Cormorant Garamond', serif",
             "'Cinzel', serif",
             "'Dancing Script', cursive",
-            "'Great Vibes', cursive"
+            "'Great Vibes', cursive",
+            "'Outfit', sans-serif",
+            "'Oswald', sans-serif",
+            "'Permanent Marker', cursive"
         ];
+        
+        // Randomize letter spans continuously
+        if (letterSpans.length > 0) {
+            setInterval(() => {
+                const randomLetter = letterSpans[Math.floor(Math.random() * letterSpans.length)];
+                if (randomLetter.innerHTML === '&nbsp;') return;
+                const randomFont = nameFonts[Math.floor(Math.random() * nameFonts.length)];
+                randomLetter.style.fontFamily = randomFont;
+            }, 500); // Change a random letter's font every 500ms
+        }
 
         let currentSlide = 0;
 
         setInterval(() => {
-            // Change Slide
+            // Change Slide Images
             heroSlides[currentSlide].classList.remove('active');
             currentSlide = (currentSlide + 1) % heroSlides.length;
             heroSlides[currentSlide].classList.add('active');
 
-            // Change Quote & Font
-            dynamicQuote.classList.add('fade-out');
+            // Change Quote & Font simultaneously
+            dynamicQuoteContainer.classList.add('fade-out');
 
             setTimeout(() => {
-                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-                const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
+                const randomQuoteIndex = Math.floor(Math.random() * quotes.length);
+                const quoteParts = quotes[randomQuoteIndex].split('|');
+                
+                const quoteText = quoteParts[0] || '';
+                const quoteAuthor = quoteParts[1] ? quoteParts[1] : '';
 
-                dynamicQuote.textContent = randomQuote;
-                dynamicQuote.style.fontFamily = randomFont;
+                const randomFont = readableFonts[Math.floor(Math.random() * readableFonts.length)];
 
-                dynamicQuote.classList.remove('fade-out');
+                dynamicQuoteText.textContent = `"${quoteText}"`;
+                dynamicQuoteText.style.fontFamily = randomFont;
+                dynamicQuoteAuthor.textContent = quoteAuthor;
+
+                dynamicQuoteContainer.classList.remove('fade-out');
             }, 800);
 
-        }, 6000);
+        }, 16000); // 16 seconds per slide/quote
     }
 
     // 5. Randomizer Button (Surprise Me)
@@ -185,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="uploads/${photo.filename}" alt="${photo.title || ''}" loading="lazy">
                         <div class="overlay">
                             <div class="overlay-content">
-                                <h3 class="photo-quote">"${photoQuotes[Math.floor(Math.random() * photoQuotes.length)]}"</h3>
+                                <h3>${photo.title || 'Untitled'}</h3>
                             </div>
                         </div>
                     `;
@@ -209,5 +274,78 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = 'auto';
             setTimeout(() => { galleryContainer.innerHTML = ''; }, 400);
         });
+    }
+
+    // 7. Featured Slideshow Logic
+    const featuredSlideshowInner = document.getElementById('featured-slideshow-inner');
+    if (featuredSlideshowInner && typeof allPhotosDB !== 'undefined' && allPhotosDB.length > 0) {
+        
+        const transitionClasses = [
+            'fx-fade-in', 'fx-slide-left', 'fx-slide-right', 'fx-slide-up', 'fx-slide-down', 
+            'fx-zoom-in', 'fx-zoom-out', 'fx-rotate-zoom', 'fx-flip-x', 'fx-flip-y', 
+            'fx-blur-in', 'fx-drop-in', 'fx-spin-in', 'fx-skew-left', 'fx-skew-right', 
+            'fx-fold-top', 'fx-fold-bottom', 'fx-slide-down-zoom', 'fx-squeeze', 'fx-expand'
+        ];
+
+        let currentFeaturedIndex = 0;
+        let currentImgElement = null;
+
+        function showNextFeaturedPhoto() {
+            if (allPhotosDB.length === 0) return;
+
+            const photo = allPhotosDB[currentFeaturedIndex];
+            currentFeaturedIndex = (currentFeaturedIndex + 1) % allPhotosDB.length;
+
+            if (!photo || !photo.filename) {
+                showNextFeaturedPhoto(); // skip recursively
+                return;
+            }
+
+            // Load image to determine aspect ratio device filtering
+            const tempImg = new Image();
+            tempImg.src = 'uploads/' + photo.filename;
+            tempImg.onload = function() {
+                const isDesktop = window.innerWidth > 768;
+                const isLandscape = tempImg.width > tempImg.height;
+
+                // Filter logic
+                // If Desktop + Portrait, or Mobile + Landscape -> skip it
+                if ((isDesktop && !isLandscape) || (!isDesktop && isLandscape)) {
+                    // Skip and recursively call next
+                    showNextFeaturedPhoto();
+                    return;
+                }
+
+                // If check passed, show it
+                const imgElement = document.createElement('img');
+                imgElement.src = tempImg.src;
+                imgElement.className = 'slideshow-img incoming';
+                imgElement.alt = photo.title || 'Featured Photo';
+                
+                const randomFx = transitionClasses[Math.floor(Math.random() * transitionClasses.length)];
+                imgElement.classList.add(randomFx);
+                
+                featuredSlideshowInner.appendChild(imgElement);
+                
+                // Allow animation to run, then clean up
+                setTimeout(() => {
+                    if (currentImgElement) {
+                        currentImgElement.remove();
+                    }
+                    imgElement.classList.remove('incoming');
+                    imgElement.classList.add('active');
+                    imgElement.classList.remove(randomFx); // Remove animation class to prevent re-trigger
+                    currentImgElement = imgElement;
+                }, 1500); // 1.5s is the duration of the animations
+            };
+            tempImg.onerror = function() { // Fallback if image load fails
+                showNextFeaturedPhoto();
+            }
+        }
+
+        // Start slideshow immediately with first photo
+        showNextFeaturedPhoto();
+        // Cycle every 4.5 seconds to allow time for reading/viewing
+        setInterval(showNextFeaturedPhoto, 4500);
     }
 });
