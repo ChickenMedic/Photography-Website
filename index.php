@@ -117,9 +117,16 @@ $photoQuotes = [
                     <span class="letter-span" style="font-family: 'Outfit', sans-serif;">D</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">w</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">s</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">o</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">n</span>
                 </span>
             </h1>
+            <?php
+                // Get a random initial quote from the array
+                $initialQuote = $photoQuotes[array_rand($photoQuotes)];
+                $quoteParts = explode('|', $initialQuote);
+                $initialText = isset($quoteParts[0]) ? $quoteParts[0] : '';
+                $initialAuthor = isset($quoteParts[1]) ? $quoteParts[1] : '';
+            ?>
             <p class="subtitle animate-up delay-1" id="dynamic-quote-container">
-                <span id="dynamic-quote-text">"Capturing light, shadows, and everything in between."</span><br>
-                <span id="dynamic-quote-author" class="quote-author">Sam Dawson</span>
+                <span id="dynamic-quote-text">"<?php echo h($initialText); ?>"</span><br>
+                <span id="dynamic-quote-author" class="quote-author"><?php echo h($initialAuthor); ?></span>
             </p>
         </div>
         <div class="scroll-indicator animate-up delay-2">

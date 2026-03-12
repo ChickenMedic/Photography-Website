@@ -306,10 +306,16 @@ img {
 .gradient-overlay {
     position: absolute;
     inset: 0;
-    /* Initial fallback */
+    z-index: 2;
+}
+
+.gradient-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
     background: rgba(10, 10, 10, 0.4);
     animation: primaryFlow 30s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
-    z-index: 2;
+    z-index: 1;
     mix-blend-mode: soft-light;
 }
 
@@ -326,8 +332,9 @@ img {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(10, 10, 10, 0.3) 0%, rgba(10, 10, 10, 1) 100%);
+    background: linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.3) 60%, rgba(10, 10, 10, 1) 100%);
     z-index: 3;
+    pointer-events: none;
 }
 
 .word-wrap {
