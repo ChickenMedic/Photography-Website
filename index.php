@@ -109,9 +109,13 @@ $photoQuotes = [
         </div>
         <div class="hero-content">
             <h1 class="animate-up" id="dynamic-name">
-                <span class="letter-span" style="font-family: 'Outfit', sans-serif;">S</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">m</span>
+                <span class="word-wrap">
+                    <span class="letter-span" style="font-family: 'Outfit', sans-serif;">S</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">m</span>
+                </span>
                 <span class="letter-span" style="font-family: 'Outfit', sans-serif;">&nbsp;</span>
-                <span class="letter-span" style="font-family: 'Outfit', sans-serif;">D</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">w</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">s</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">o</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">n</span>
+                <span class="word-wrap">
+                    <span class="letter-span" style="font-family: 'Outfit', sans-serif;">D</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">w</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">s</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">o</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">n</span>
+                </span>
             </h1>
             <p class="subtitle animate-up delay-1" id="dynamic-quote-container">
                 <span id="dynamic-quote-text">"Capturing light, shadows, and everything in between."</span><br>
