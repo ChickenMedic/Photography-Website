@@ -203,11 +203,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     }
 
     if (empty($error)) {
-        $stmt = $pdo->prepare("INSERT INTO projects (title, description, cover_image, url, series_name, content) VALUES (?, ?, ?, ?, ?, ?)");
-        if ($stmt->execute([$title, $description, $coverFilename, $url, $series_name, $content])) {
-             $message = "Project created successfully!";
-        } else {
-             $error = "Database error creating project.";
+        try {
+            $stmt = $pdo->prepare("INSERT INTO projects (title, description, cover_image, url, series_name, content) VALUES (?, ?, ?, ?, ?, ?)");
+            if ($stmt->execute([$title, $description, $coverFilename, $url, $series_name, $content])) {
+                 $message = "Project created successfully!";
+            } else {
+                 $error = "Database error creating project.";
+            }
+        } catch (PDOException $e) {
+            $error = "Fatal SQL Error: " . $e->getMessage();
         }
     }
 }
@@ -256,13 +260,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_project'])) {
     }
 
     if (empty($error)) {
-        $stmt = $pdo->prepare("UPDATE projects SET title=?, description=?, cover_image=?, url=?, series_name=?, content=? WHERE id=?");
-        if ($stmt->execute([$title, $description, $coverFilename, $url, $series_name, $content, $id])) {
-             $message = "Project updated successfully!";
-             header("Location: admin.php");
-             exit;
-        } else {
-             $error = "Database error updating project.";
+        try {
+            $stmt = $pdo->prepare("UPDATE projects SET title=?, description=?, cover_image=?, url=?, series_name=?, content=? WHERE id=?");
+            if ($stmt->execute([$title, $description, $coverFilename, $url, $series_name, $content, $id])) {
+                 $message = "Project updated successfully!";
+                 header("Location: admin.php");
+                 exit;
+            } else {
+                 $error = "Database error updating project.";
+            }
+        } catch (PDOException $e) {
+            $error = "Fatal SQL Error: " . $e->getMessage();
         }
     }
 }
