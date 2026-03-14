@@ -150,6 +150,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
     $location_id = !empty($_POST['location_id']) ? $_POST['location_id'] : null;
     $title = trim($_POST['title']);
     $description = trim($_POST['description']);
+    $tags = trim($_POST['tags']);
     $file = $_FILES['photo'];
 
     if ($file['error'] === UPLOAD_ERR_OK) {
@@ -161,8 +162,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
             $destination = UPLOAD_DIR . $newFilename;
 
             if (move_uploaded_file($file['tmp_name'], $destination)) {
-                $stmt = $pdo->prepare("INSERT INTO photos (location_id, filename, title, description) VALUES (?, ?, ?, ?)");
-                if ($stmt->execute([$location_id, $newFilename, $title, $description])) {
+                $stmt = $pdo->prepare("INSERT INTO photos (location_id, filename, title, description, tags) VALUES (?, ?, ?, ?, ?)");
+                if ($stmt->execute([$location_id, $newFilename, $title, $description, $tags])) {
                     $message = "Photo uploaded successfully!";
                 } else {
                     $error = "Database error inserting photo.";
@@ -183,6 +184,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     $title = trim($_POST['project_title']);
     $description = trim($_POST['project_description']);
     $url = trim($_POST['project_url']);
+    $series_name = trim($_POST['series_name']);
+    $content = isset($_POST['project_content']) ? trim($_POST['project_content']) : '';
     $file = $_FILES['cover_image'];
     
     $coverFilename = null;
@@ -200,8 +203,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     }
 
     if (empty($error)) {
-        $stmt = $pdo->prepare("INSERT INTO projects (title, description, cover_image, url) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$title, $description, $coverFilename, $url])) {
+        $stmt = $pdo->prepare("INSERT INTO projects (title, description, cover_image, url, series_name, content) VALUES (?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$title, $description, $coverFilename, $url, $series_name, $content])) {
              $message = "Project created successfully!";
         } else {
              $error = "Database error creating project.";
@@ -209,6 +212,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     }
 }
 
+// Handle Project Deletion
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_project'])) {
+    $id = $_POST['delete_project_id'];
+    $stmt = $pdo->prepare("SELECT cover_image FROM projects WHERE id = ?");
+    $stmt->execute([$id]);
+    $proj = $stmt->fetch();
+    if ($proj && $proj['cover_image']) {
+        @unlink(UPLOAD_DIR . $proj['cover_image']);
+    }
+    $pdo->prepare("DELETE FROM projects WHERE id = ?")->execute([$id]);
+    $message = "Project deleted successfully.";
+}
+
+// Handle Project Update
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_project'])) {
+    $id = $_POST['update_project_id'];
+    $title = trim($_POST['project_title']);
+    $description = trim($_POST['project_description']);
+    $url = trim($_POST['project_url']);
+    $series_name = trim($_POST['series_name']);
+    $content = isset($_POST['project_content']) ? trim($_POST['project_content']) : '';
+
+    $file = $_FILES['cover_image'];
+    
+    $stmt = $pdo->prepare("SELECT cover_image FROM projects WHERE id = ?");
+    $stmt->execute([$id]);
+    $oldProj = $stmt->fetch();
+    $coverFilename = $oldProj ? $oldProj['cover_image'] : null;
+
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+        if (in_array($ext, $allowed)) {
+            $newFilename = uniqid('proj_cover_') . '.' . $ext;
+            if (move_uploaded_file($file['tmp_name'], UPLOAD_DIR . $newFilename)) {
+                if ($coverFilename) @unlink(UPLOAD_DIR . $coverFilename);
+                $coverFilename = $newFilename;
+            } else {
+                $error = "Failed to upload cover image.";
+            }
+        }
+    }
+
+    if (empty($error)) {
+        $stmt = $pdo->prepare("UPDATE projects SET title=?, description=?, cover_image=?, url=?, series_name=?, content=? WHERE id=?");
+        if ($stmt->execute([$title, $description, $coverFilename, $url, $series_name, $content, $id])) {
+             $message = "Project updated successfully!";
+             header("Location: admin.php");
+             exit;
+        } else {
+             $error = "Database error updating project.";
+        }
+    }
+}
+
+$projects = $pdo->query("SELECT * FROM projects ORDER BY id DESC")->fetchAll();
+$all_photos = $pdo->query("SELECT * FROM photos ORDER BY id DESC")->fetchAll();
+
+$edit_project_data = null;
+if (isset($_GET['edit_project'])) {
+    $stmt = $pdo->prepare("SELECT * FROM projects WHERE id = ?");
+    $stmt->execute([$_GET['edit_project']]);
+    $edit_project_data = $stmt->fetch();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -216,6 +283,46 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - <?php echo h(SITE_NAME); ?></title>
+    <!-- Summernote WYSIWYG Editor (Free, No API Key, Drag & Drop Images) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <script>
+      $(document).ready(function() {
+          var ServerPhotoButton = function(context) {
+              var ui = $.summernote.ui;
+              var button = ui.button({
+                  contents: '<i class="note-icon-picture"/> Server Photo',
+                  tooltip: 'Insert Existing Photo from Website',
+                  click: function() {
+                      document.getElementById('photoModal').style.display = 'flex';
+                  }
+              });
+              return button.render();
+          }
+
+          $('#project_content').summernote({
+              height: 400,
+              placeholder: 'Write your project guide here. You can drag and drop images directly into this box!',
+              buttons: {
+                  serverPhoto: ServerPhotoButton
+              },
+              toolbar: [
+                  ['style', ['style']],
+                  ['font', ['bold', 'italic', 'underline', 'clear']],
+                  ['para', ['ul', 'ol', 'paragraph']],
+                  ['custom', ['serverPhoto']],
+                  ['insert', ['link', 'picture', 'video']],
+                  ['view', ['codeview', 'help']]
+              ]
+          });
+      });
+
+      function insertPhoto(url) {
+          $('#project_content').summernote('insertImage', url);
+          document.getElementById('photoModal').style.display = 'none';
+      }
+    </script>
     <!-- We will use a basic inline style for admin to keep dependencies low, but could link external -->
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #cbd5e1; margin: 0; padding: 20px; }
@@ -241,9 +348,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
         .location-dropzone p { margin: 0; color: #94a3b8; font-size: 0.9rem; pointer-events: none; }
         .upload-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: #3b82f6; width: 0%; transition: width 0.3s; border-radius: 0 0 8px 8px;}
         select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; margin-bottom: 16px; }
+        
+        /* Photo Picker Modal */
+        .photo-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; }
+        .photo-modal-content { background: #1e293b; padding: 24px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5);}
+        .photo-modal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-top: 20px; }
+        .photo-modal-grid img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
+        .photo-modal-grid img:hover { border-color: #3b82f6; }
+        .close-modal { float: right; cursor: pointer; color: #94a3b8; font-size: 28px; line-height: 1; font-weight: bold; }
+        .close-modal:hover { color: #f8fafc; }
     </style>
 </head>
 <body>
+    <!-- Photo Picker Modal -->
+    <div id="photoModal" class="photo-modal">
+        <div class="photo-modal-content">
+            <span class="close-modal" onclick="document.getElementById('photoModal').style.display='none'">&times;</span>
+            <h2 style="margin-bottom: 5px;">Select a Photo</h2>
+            <p style="color: #94a3b8; margin-top: 0; margin-bottom: 20px;">Click any photo previously uploaded to the gallery to insert it into your project.</p>
+            
+            <input type="text" id="photoSearch" placeholder="Search by tags (e.g. guide)" style="margin-bottom: 20px;" onkeyup="filterPhotos()">
+
+            <div class="photo-modal-grid" id="photoGrid">
+                <?php foreach ($all_photos as $img): ?>
+                    <img src="uploads/<?php echo h($img['filename']); ?>" alt="<?php echo h($img['title']); ?>" data-tags="<?php echo isset($img['tags']) ? h(strtolower($img['tags'])) : ''; ?>" onclick="insertPhoto('uploads/<?php echo h($img['filename']); ?>')">
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterPhotos() {
+            var input = document.getElementById("photoSearch").value.toLowerCase();
+            var grid = document.getElementById("photoGrid");
+            var images = grid.getElementsByTagName("img");
+            
+            for (var i = 0; i < images.length; i++) {
+                var tags = images[i].getAttribute("data-tags");
+                if (tags && tags.indexOf(input) > -1) {
+                    images[i].style.display = "";
+                } else if (!input) {
+                    images[i].style.display = "";
+                } else {
+                    images[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+
     <div class="container">
         <div class="header">
             <h1>Admin Dashboard</h1>
@@ -327,31 +479,85 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
                     <label for="description">Description (Optional)</label>
                     <textarea name="description" id="description" placeholder="Where was this taken?"></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="tags">Tags (comma-separated, optional)</label>
+                    <input type="text" name="tags" id="tags" placeholder="e.g. guide, hero, portrait">
+                </div>
                 <button type="submit" name="upload_photo">Upload Photo</button>
             </form>
         </div>
 
         <div class="card">
-            <h2>Add Project</h2>
+            <h2><?php echo $edit_project_data ? 'Edit Project' : 'Add Project'; ?></h2>
             <form method="POST" action="admin.php" enctype="multipart/form-data">
+                <?php if ($edit_project_data): ?>
+                    <input type="hidden" name="update_project_id" value="<?php echo $edit_project_data['id']; ?>">
+                <?php endif; ?>
                 <div class="form-group">
                     <label for="project_title">Project Title</label>
-                    <input type="text" name="project_title" id="project_title" required>
+                    <input type="text" name="project_title" id="project_title" required value="<?php echo $edit_project_data ? h($edit_project_data['title']) : ''; ?>">
                 </div>
                 <div class="form-group">
-                    <label for="cover_image">Cover Image (Optional)</label>
+                    <label for="cover_image">Cover Image (Optional) <?php if ($edit_project_data && $edit_project_data['cover_image']) echo ' - Leave blank to keep current'; ?></label>
                     <input type="file" name="cover_image" id="cover_image" accept="image/jpeg, image/png, image/webp">
                 </div>
                 <div class="form-group">
-                    <label for="project_url">External URL (Optional)</label>
-                    <input type="url" name="project_url" id="project_url" placeholder="https://...">
+                    <label for="project_url">Clean URL or External Link (Optional)</label>
+                    <input type="text" name="project_url" id="project_url" placeholder="e.g. AWSGuideStep1 or https://..." value="<?php echo $edit_project_data ? h($edit_project_data['url']) : ''; ?>">
                 </div>
                 <div class="form-group">
-                    <label for="project_description">Description</label>
-                    <textarea name="project_description" id="project_description"></textarea>
+                    <label for="series_name">Series Name (Optional grouping for Homepage)</label>
+                    <input type="text" name="series_name" id="series_name" placeholder="e.g. Website Builder" value="<?php echo $edit_project_data ? h($edit_project_data['series_name']) : ''; ?>">
                 </div>
-                <button type="submit" name="create_project">Create Project</button>
+                <div class="form-group">
+                    <label for="project_description">Short Description (for the Project Card)</label>
+                    <textarea name="project_description" id="project_description" placeholder="A brief summary for the homepage"><?php echo $edit_project_data ? h($edit_project_data['description']) : ''; ?></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="project_content">Full Page Content (WYSIWYG Editor)</label>
+                    <textarea name="project_content" id="project_content"><?php echo $edit_project_data ? h($edit_project_data['content']) : ''; ?></textarea>
+                </div>
+                <?php if ($edit_project_data): ?>
+                    <button type="submit" name="update_project">Update Project</button>
+                    <a href="admin.php" style="margin-left: 10px; color: #cbd5e1; text-decoration: none;">Cancel</a>
+                <?php else: ?>
+                    <button type="submit" name="create_project">Create Project</button>
+                <?php endif; ?>
             </form>
+        </div>
+
+        <div class="card">
+            <h2>Manage Projects</h2>
+            <div style="overflow-x:auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #475569;">
+                            <th style="padding: 10px;">ID</th>
+                            <th style="padding: 10px;">Title</th>
+                            <th style="padding: 10px;">URL/Slug</th>
+                            <th style="padding: 10px;">Series</th>
+                            <th style="padding: 10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($projects as $p): ?>
+                        <tr style="border-bottom: 1px solid #334155;">
+                            <td style="padding: 10px;"><?php echo $p['id']; ?></td>
+                            <td style="padding: 10px;"><?php echo h($p['title']); ?></td>
+                            <td style="padding: 10px;"><?php echo h($p['url']); ?></td>
+                            <td style="padding: 10px;"><?php echo h($p['series_name']); ?></td>
+                            <td style="padding: 10px;">
+                                <a href="admin.php?edit_project=<?php echo $p['id']; ?>" style="color: #4ade80; text-decoration: none; margin-right: 10px;">Edit</a>
+                                <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this project?');">
+                                    <input type="hidden" name="delete_project_id" value="<?php echo $p['id']; ?>">
+                                    <button type="submit" name="delete_project" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

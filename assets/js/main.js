@@ -2,15 +2,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Navbar Glassmorphism Effect on Scroll
     const nav = document.querySelector('.glass-nav');
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            nav.style.padding = '10px 5%';
-            nav.style.background = 'rgba(10, 10, 10, 0.8)';
-        } else {
-            nav.style.padding = '20px 5%';
-            nav.style.background = 'rgba(10, 10, 10, 0.6)';
-        }
-    });
+    if (nav) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                nav.style.padding = '10px 5%';
+                nav.style.background = 'rgba(10, 10, 10, 0.8)';
+            } else {
+                nav.style.padding = '20px 5%';
+                nav.style.background = 'rgba(10, 10, 10, 0.6)';
+            }
+        });
+    }
 
     // 2. Intersection Observer for Scroll Animations
     const observerOptions = {
@@ -40,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.querySelector('.close-btn');
 
     function openLightbox(imgSrc, title, desc) {
+        if (!lightbox || !lightboxImg) return;
         lightboxImg.src = imgSrc;
         lightboxTitle.textContent = title;
         lightboxDesc.textContent = desc;
@@ -61,30 +64,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close lightbox functions
     const closeLightbox = () => {
+        if (!lightbox) return;
         lightbox.classList.remove('active');
-        if (!document.getElementById('location-gallery-modal').classList.contains('active')) {
+        
+        const locModal = document.getElementById('location-gallery-modal');
+        if (!locModal || !locModal.classList.contains('active')) {
             document.body.style.overflow = 'auto'; // Only re-enable if gallery not open
         }
 
         setTimeout(() => {
-            if (!lightbox.classList.contains('active')) {
+            if (!lightbox.classList.contains('active') && lightboxImg) {
                 lightboxImg.src = '';
             }
         }, 400);
     };
 
-    closeBtn.addEventListener('click', closeLightbox);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeLightbox);
+    }
 
     // Close on background click
-    lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) {
-            closeLightbox();
-        }
-    });
+    if (lightbox) {
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
+    }
 
     // Close on Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+        if (e.key === 'Escape' && lightbox && lightbox.classList.contains('active')) {
             closeLightbox();
         }
     });
@@ -193,7 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 dynamicQuoteText.textContent = `"${quoteText}"`;
                 dynamicQuoteText.style.fontFamily = randomFont;
+                
                 dynamicQuoteAuthor.textContent = quoteAuthor;
+                dynamicQuoteAuthor.style.fontFamily = randomFont;
 
                 dynamicQuoteContainer.classList.remove('fade-out');
             }, 800);
@@ -348,4 +360,41 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cycle every 4.5 seconds to allow time for reading/viewing
         setInterval(showNextFeaturedPhoto, 4500);
     }
+
+    // 8. Code Block Copy Buttons
+    const preBlocks = document.querySelectorAll('pre');
+    preBlocks.forEach((pre) => {
+        // Create the button
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-code-btn';
+        copyBtn.innerHTML = '<span>Copy</span>';
+        
+        // Wrap the pre block to allow absolute positioning of the button
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+        wrapper.appendChild(copyBtn);
+
+        // Copy functionality
+        copyBtn.addEventListener('click', async () => {
+            const codeToCopy = pre.innerText;
+            try {
+                await navigator.clipboard.writeText(codeToCopy);
+                
+                // Visual feedback
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<span>Copied!</span>';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        });
+    });
 });

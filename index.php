@@ -70,14 +70,14 @@ $photoQuotes = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&family=Playfair+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Cinzel&family=Dancing+Script&family=Great+Vibes&family=Oswald:wght@500;700&family=Roboto+Mono:wght@400;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Lora:ital@0;1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>">
 </head>
 <body>
 
     <!-- Navigation -->
     <nav class="glass-nav">
         <div class="nav-container">
-            <a href="#" class="logo">SD</a>
+            <a href="#" class="logo"><span class="letter-span">S</span><span class="letter-span">D</span>.</a>
             <ul class="nav-links">
                 <li><a href="#gallery">Gallery</a></li>
                 <li><a href="#projects">Projects</a></li>
@@ -112,7 +112,6 @@ $photoQuotes = [
                 <span class="word-wrap">
                     <span class="letter-span" style="font-family: 'Outfit', sans-serif;">S</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">m</span>
                 </span>
-                <span class="letter-span" style="font-family: 'Outfit', sans-serif;">&nbsp;</span>
                 <span class="word-wrap">
                     <span class="letter-span" style="font-family: 'Outfit', sans-serif;">D</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">a</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">w</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">s</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">o</span><span class="letter-span" style="font-family: 'Outfit', sans-serif;">n</span>
                 </span>
@@ -231,27 +230,75 @@ $photoQuotes = [
                     <p>No projects have been added yet.</p>
                 </div>
             <?php else: ?>
-                <div class="projects-grid">
-                    <?php foreach ($projects as $project): ?>
-                        <div class="project-card fade-in">
-                            <?php if ($project['cover_image']): ?>
-                                <div class="project-img-wrapper">
-                                    <img src="uploads/<?php echo h($project['cover_image']); ?>" alt="<?php echo h($project['title']); ?>" loading="lazy" class="project-img">
+                <?php
+                // Group projects by series
+                $groupedProjects = [];
+                $ungroupedProjects = [];
+
+                foreach ($projects as $project) {
+                    $series = trim($project['series_name']);
+                    if (!empty($series)) {
+                        if (!isset($groupedProjects[$series])) $groupedProjects[$series] = [];
+                        $groupedProjects[$series][] = $project;
+                    } else {
+                        $ungroupedProjects[] = $project;
+                    }
+                }
+                ?>
+
+                <!-- Render Grouped Projects -->
+                <?php foreach ($groupedProjects as $seriesName => $seriesProjects): ?>
+                    <div class="series-group fade-in">
+                        <div class="series-bg-text"><?php echo h($seriesName); ?></div>
+                        <h3 class="series-title" style="margin-bottom: 30px; color: var(--accent); position:relative; z-index:2;"><?php echo h($seriesName); ?> Series</h3>
+                        <div class="projects-grid">
+                            <?php foreach ($seriesProjects as $project): ?>
+                                <div class="project-card">
+                                    <?php if ($project['cover_image']): ?>
+                                        <div class="project-img-wrapper">
+                                            <img src="uploads/<?php echo h($project['cover_image']); ?>" alt="<?php echo h($project['title']); ?>" loading="lazy" class="project-img">
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="project-img-wrapper fallback-bg"></div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="project-info">
+                                        <h3><?php echo h($project['title']); ?></h3>
+                                        <p><?php echo h($project['description']); ?></p>
+                                        <?php if ($project['url']): ?>
+                                            <a href="<?php echo h($project['url']); ?>" class="btn-primary">View Project</a>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                            <?php else: ?>
-                                <div class="project-img-wrapper fallback-bg"></div>
-                            <?php endif; ?>
-                            
-                            <div class="project-info">
-                                <h3><?php echo h($project['title']); ?></h3>
-                                <p><?php echo h($project['description']); ?></p>
-                                <?php if ($project['url']): ?>
-                                    <a href="<?php echo h($project['url']); ?>" target="_blank" class="btn-primary">View Project</a>
-                                <?php endif; ?>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endforeach; ?>
-                </div>
+                    </div>
+                <?php endforeach; ?>
+
+                <!-- Render Ungrouped Projects -->
+                <?php if (!empty($ungroupedProjects)): ?>
+                    <div class="projects-grid">
+                        <?php foreach ($ungroupedProjects as $project): ?>
+                            <div class="project-card fade-in">
+                                <?php if ($project['cover_image']): ?>
+                                    <div class="project-img-wrapper">
+                                        <img src="uploads/<?php echo h($project['cover_image']); ?>" alt="<?php echo h($project['title']); ?>" loading="lazy" class="project-img">
+                                    </div>
+                                <?php else: ?>
+                                    <div class="project-img-wrapper fallback-bg"></div>
+                                <?php endif; ?>
+                                
+                                <div class="project-info">
+                                    <h3><?php echo h($project['title']); ?></h3>
+                                    <p><?php echo h($project['description']); ?></p>
+                                    <?php if ($project['url']): ?>
+                                        <a href="<?php echo h($project['url']); ?>" class="btn-primary">View Project</a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
@@ -303,6 +350,6 @@ $photoQuotes = [
     <script>
         const allPhotosDB = <?php echo json_encode($photos); ?>;
     </script>
-    <script src="assets/js/main.js"></script>
+    <script src="assets/js/main.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
