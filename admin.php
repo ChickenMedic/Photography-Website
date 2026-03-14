@@ -407,6 +407,14 @@ if (isset($_GET['edit_project'])) {
         .photo-modal-grid img:hover { border-color: #3b82f6; }
         .close-modal { float: right; cursor: pointer; color: #94a3b8; font-size: 28px; line-height: 1; font-weight: bold; }
         .close-modal:hover { color: #f8fafc; }
+        ul, li { list-style: none; padding: 0; margin: 0; }
+
+        /* Collapsible Card Enhancements */
+        .card h2 { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; transition: color 0.3s; margin-bottom: 0; }
+        .card h2:hover { color: #60a5fa; }
+        .card h2::after { content: '＋'; font-size: 1.2rem; color: #64748b; transition: transform 0.3s; }
+        .card h2.active::after { content: '−'; transform: rotate(180deg); }
+        .card-content { margin-top: 20px; transition: all 0.3s ease; }
     </style>
 </head>
 <body>
@@ -464,185 +472,197 @@ if (isset($_GET['edit_project'])) {
 
         <div class="card">
             <h2>Add Location (Album)</h2>
-            <form method="POST" action="admin.php">
-                <div class="form-group">
-                    <label for="location_name">Location Name</label>
-                    <input type="text" name="location_name" id="location_name" placeholder="e.g. Paris" required>
-                </div>
-                <button type="submit" name="create_location">Create Location</button>
-            </form>
+            <div class="card-content" style="display: none;">
+                <form method="POST" action="admin.php">
+                    <div class="form-group">
+                        <label for="location_name">Location Name</label>
+                        <input type="text" name="location_name" id="location_name" placeholder="e.g. Paris" required>
+                    </div>
+                    <button type="submit" name="create_location">Create Location</button>
+                </form>
+            </div>
         </div>
 
         <div class="card">
             <h2>Upload Photos by Location</h2>
-            <p style="color: #94a3b8; margin-bottom: 20px;">Drag and drop photo files directly onto a location below to upload them.</p>
-            <div class="locations-grid">
-                <?php
-                if (!isset($pdo)) { require_once 'config.php'; }
-                $stmtLocs = $pdo->query("SELECT * FROM locations ORDER BY name ASC");
-                $locations = $stmtLocs->fetchAll();
-                if (empty($locations)) {
-                    echo "<p style='color: #94a3b8;'>No locations found. Create one above.</p>";
-                } else {
-                    foreach ($locations as $loc) {
-                        $isActive = isset($loc['is_active']) ? $loc['is_active'] : 1;
-                        $opacity = $isActive ? '1' : '0.5';
-                        echo "<div class='location-dropzone' data-id='" . $loc['id'] . "' style='opacity: {$opacity};'>";
-                        echo "<div style='display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;'>";
-                        echo "<h3 style='margin:0; text-align:left;'>" . h($loc['name']) . ($isActive ? "" : " <span style='font-size:0.8rem; color:#ef4444;'>(Hidden)</span>") . "</h3>";
-                        echo "<form method='POST' action='admin.php' style='margin:0;'>";
-                        echo "<input type='hidden' name='location_id' value='{$loc['id']}'>";
-                        echo "<input type='hidden' name='current_status' value='{$isActive}'>";
-                        echo "<button type='submit' name='toggle_location' style='padding: 4px 8px; font-size: 11px; background: ".($isActive ? '#ef4444' : '#22c55e').";'>" . ($isActive ? 'Hide' : 'Show') . "</button>";
-                        echo "</form>";
-                        echo "</div>";
-                        echo "<p>Drop photos here</p>";
-                        echo "<div class='upload-progress'></div>";
-                        echo "</div>";
+            <div class="card-content" style="display: none;">
+                <p style="color: #94a3b8; margin-bottom: 20px;">Drag and drop photo files directly onto a location below to upload them.</p>
+                <div class="locations-grid">
+                    <?php
+                    if (!isset($pdo)) { require_once 'config.php'; }
+                    $stmtLocs = $pdo->query("SELECT * FROM locations ORDER BY name ASC");
+                    $locations = $stmtLocs->fetchAll();
+                    if (empty($locations)) {
+                        echo "<p style='color: #94a3b8;'>No locations found. Create one above.</p>";
+                    } else {
+                        foreach ($locations as $loc) {
+                            $isActive = isset($loc['is_active']) ? $loc['is_active'] : 1;
+                            $opacity = $isActive ? '1' : '0.5';
+                            echo "<div class='location-dropzone' data-id='" . $loc['id'] . "' style='opacity: {$opacity};'>";
+                            echo "<div style='display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;'>";
+                            echo "<h3 style='margin:0; text-align:left;'>" . h($loc['name']) . ($isActive ? "" : " <span style='font-size:0.8rem; color:#ef4444;'>(Hidden)</span>") . "</h3>";
+                            echo "<form method='POST' action='admin.php' style='margin:0;'>";
+                            echo "<input type='hidden' name='location_id' value='{$loc['id']}'>";
+                            echo "<input type='hidden' name='current_status' value='{$isActive}'>";
+                            echo "<button type='submit' name='toggle_location' style='padding: 4px 8px; font-size: 11px; background: ".($isActive ? '#ef4444' : '#22c55e').";'>" . ($isActive ? 'Hide' : 'Show') . "</button>";
+                            echo "</form>";
+                            echo "</div>";
+                            echo "<p>Drop photos here</p>";
+                            echo "<div class='upload-progress'></div>";
+                            echo "</div>";
+                        }
                     }
-                }
-                ?>
+                    ?>
+                </div>
             </div>
         </div>
 
         <div class="card">
             <h2>Upload Photos</h2>
-            <form method="POST" action="admin.php" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="location_id">Select Location (Optional)</label>
-                    <select name="location_id" id="location_id">
-                        <option value="">-- None --</option>
-                        <?php foreach($locations as $loc): ?>
-                            <option value="<?php echo $loc['id']; ?>"><?php echo h($loc['name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="photo">Select Photos (Select multiple from phone camera roll)</label>
-                    <input type="file" name="photo[]" id="photo" required multiple accept="image/jpeg, image/png, image/webp, image/gif">
-                </div>
-                <div class="form-group">
-                    <label for="title">Title (Optional)</label>
-                    <input type="text" name="title" id="title" placeholder="A beautiful sunset">
-                </div>
-                <div class="form-group">
-                    <label for="description">Description (Optional)</label>
-                    <textarea name="description" id="description" placeholder="Where was this taken?"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="tags">Tags (comma-separated, optional)</label>
-                    <input type="text" name="tags" id="tags" placeholder="e.g. guide, hero, portrait">
-                </div>
-                <button type="submit" name="upload_photo">Upload Photo</button>
-            </form>
+            <div class="card-content" style="display: none;">
+                <form method="POST" action="admin.php" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="location_id">Select Location (Optional)</label>
+                        <select name="location_id" id="location_id">
+                            <option value="">-- None --</option>
+                            <?php foreach($locations as $loc): ?>
+                                <option value="<?php echo $loc['id']; ?>"><?php echo h($loc['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="photo">Select Photos (Select multiple from phone camera roll)</label>
+                        <input type="file" name="photo[]" id="photo" required multiple accept="image/jpeg, image/png, image/webp, image/gif">
+                    </div>
+                    <div class="form-group">
+                        <label for="title">Title (Optional)</label>
+                        <input type="text" name="title" id="title" placeholder="A beautiful sunset">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description (Optional)</label>
+                        <textarea name="description" id="description" placeholder="Where was this taken?"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="tags">Tags (comma-separated, optional)</label>
+                        <input type="text" name="tags" id="tags" placeholder="e.g. guide, hero, portrait">
+                    </div>
+                    <button type="submit" name="upload_photo">Upload Photo</button>
+                </form>
+            </div>
         </div>
 
         <div class="card">
             <h2><?php echo $edit_project_data ? 'Edit Project' : 'Add Project'; ?></h2>
-            <form method="POST" action="admin.php" enctype="multipart/form-data">
-                <?php if ($edit_project_data): ?>
-                    <input type="hidden" name="update_project_id" value="<?php echo $edit_project_data['id']; ?>">
-                <?php endif; ?>
-                <div class="form-group">
-                    <label for="project_title">Project Title</label>
-                    <input type="text" name="project_title" id="project_title" required value="<?php echo $edit_project_data ? h($edit_project_data['title']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="cover_image">Cover Image (Optional) <?php if ($edit_project_data && $edit_project_data['cover_image']) echo ' - Leave blank to keep current'; ?></label>
-                    <input type="file" name="cover_image" id="cover_image" accept="image/jpeg, image/png, image/webp">
-                </div>
-                <div class="form-group">
-                    <label for="project_url">Clean URL or External Link (Optional)</label>
-                    <input type="text" name="project_url" id="project_url" placeholder="e.g. AWSGuideStep1 or https://..." value="<?php echo $edit_project_data ? h($edit_project_data['url']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="series_name">Series Name (Optional grouping for Homepage)</label>
-                    <input type="text" name="series_name" id="series_name" placeholder="e.g. Website Builder" value="<?php echo $edit_project_data ? h($edit_project_data['series_name']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="project_description">Short Description (for the Project Card)</label>
-                    <textarea name="project_description" id="project_description" placeholder="A brief summary for the homepage"><?php echo $edit_project_data ? h($edit_project_data['description']) : ''; ?></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="project_content">Full Page Content (WYSIWYG Editor)</label>
-                    <textarea name="project_content" id="project_content"><?php echo $edit_project_data ? h($edit_project_data['content']) : ''; ?></textarea>
-                </div>
-                <?php if ($edit_project_data): ?>
-                    <button type="submit" name="update_project">Update Project</button>
-                    <a href="admin.php" style="margin-left: 10px; color: #cbd5e1; text-decoration: none;">Cancel</a>
-                <?php else: ?>
-                    <button type="submit" name="create_project">Create Project</button>
-                <?php endif; ?>
-            </form>
+            <div class="card-content" <?php echo $edit_project_data ? 'style="display: block;"' : 'style="display: none;"'; ?>>
+                <form method="POST" action="admin.php" enctype="multipart/form-data">
+                    <?php if ($edit_project_data): ?>
+                        <input type="hidden" name="update_project_id" value="<?php echo $edit_project_data['id']; ?>">
+                    <?php endif; ?>
+                    <div class="form-group">
+                        <label for="project_title">Project Title</label>
+                        <input type="text" name="project_title" id="project_title" required value="<?php echo $edit_project_data ? h($edit_project_data['title']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="cover_image">Cover Image (Optional) <?php if ($edit_project_data && $edit_project_data['cover_image']) echo ' - Leave blank to keep current'; ?></label>
+                        <input type="file" name="cover_image" id="cover_image" accept="image/jpeg, image/png, image/webp">
+                    </div>
+                    <div class="form-group">
+                        <label for="project_url">Clean URL or External Link (Optional)</label>
+                        <input type="text" name="project_url" id="project_url" placeholder="e.g. AWSGuideStep1 or https://..." value="<?php echo $edit_project_data ? h($edit_project_data['url']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="series_name">Series Name (Optional grouping for Homepage)</label>
+                        <input type="text" name="series_name" id="series_name" placeholder="e.g. Website Builder" value="<?php echo $edit_project_data ? h($edit_project_data['series_name']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="project_description">Short Description (for the Project Card)</label>
+                        <textarea name="project_description" id="project_description" placeholder="A brief summary for the homepage"><?php echo $edit_project_data ? h($edit_project_data['description']) : ''; ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="project_content">Full Page Content (WYSIWYG Editor)</label>
+                        <textarea name="project_content" id="project_content"><?php echo $edit_project_data ? h($edit_project_data['content']) : ''; ?></textarea>
+                    </div>
+                    <?php if ($edit_project_data): ?>
+                        <button type="submit" name="update_project">Update Project</button>
+                        <a href="admin.php" style="margin-left: 10px; color: #cbd5e1; text-decoration: none;">Cancel</a>
+                    <?php else: ?>
+                        <button type="submit" name="create_project">Create Project</button>
+                    <?php endif; ?>
+                </form>
+            </div>
         </div>
 
         <div class="card">
             <h2>Manage Photos</h2>
-            <p style="color: #94a3b8; margin-bottom: 20px;">Review and delete uploaded photos. Deleting a photo will permanently remove it from the server and the galleries.</p>
-            <div style="overflow-x:auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid #475569;">
-                            <th style="padding: 10px;">Preview</th>
-                            <th style="padding: 10px;">ID</th>
-                            <th style="padding: 10px;">Filename</th>
-                            <th style="padding: 10px;">Title</th>
-                            <th style="padding: 10px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($all_photos as $photoItem): ?>
-                        <tr style="border-bottom: 1px solid #334155;">
-                            <td style="padding: 10px;">
-                                <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
-                            </td>
-                            <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['id']; ?></td>
-                            <td style="padding: 10px; font-family: monospace; color: #cbd5e1;"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
-                            <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
-                            <td style="padding: 10px;">
-                                <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.');">
-                                    <input type="hidden" name="delete_photo_id" value="<?php echo $photoItem['id']; ?>">
-                                    <button type="submit" name="delete_photo" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="card-content" style="display: none;">
+                <p style="color: #94a3b8; margin-bottom: 20px;">Review and delete uploaded photos. Deleting a photo will permanently remove it from the server and the galleries.</p>
+                <div style="overflow-x:auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #475569;">
+                                <th style="padding: 10px;">Preview</th>
+                                <th style="padding: 10px;">ID</th>
+                                <th style="padding: 10px;">Filename</th>
+                                <th style="padding: 10px;">Title</th>
+                                <th style="padding: 10px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($all_photos as $photoItem): ?>
+                            <tr style="border-bottom: 1px solid #334155;">
+                                <td style="padding: 10px;">
+                                    <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
+                                </td>
+                                <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['id']; ?></td>
+                                <td style="padding: 10px; font-family: monospace; color: #cbd5e1;"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
+                                <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
+                                <td style="padding: 10px;">
+                                    <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.');">
+                                        <input type="hidden" name="delete_photo_id" value="<?php echo $photoItem['id']; ?>">
+                                        <button type="submit" name="delete_photo" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div class="card">
             <h2>Manage Projects</h2>
-            <div style="overflow-x:auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid #475569;">
-                            <th style="padding: 10px;">ID</th>
-                            <th style="padding: 10px;">Title</th>
-                            <th style="padding: 10px;">URL/Slug</th>
-                            <th style="padding: 10px;">Series</th>
-                            <th style="padding: 10px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($projects as $p): ?>
-                        <tr style="border-bottom: 1px solid #334155;">
-                            <td style="padding: 10px;"><?php echo $p['id']; ?></td>
-                            <td style="padding: 10px;"><?php echo h($p['title']); ?></td>
-                            <td style="padding: 10px;"><?php echo h($p['url']); ?></td>
-                            <td style="padding: 10px;"><?php echo h($p['series_name']); ?></td>
-                            <td style="padding: 10px;">
-                                <a href="admin.php?edit_project=<?php echo $p['id']; ?>" style="color: #4ade80; text-decoration: none; margin-right: 10px;">Edit</a>
-                                <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this project?');">
-                                    <input type="hidden" name="delete_project_id" value="<?php echo $p['id']; ?>">
-                                    <button type="submit" name="delete_project" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="card-content" style="display: none;">
+                <div style="overflow-x:auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #475569;">
+                                <th style="padding: 10px;">ID</th>
+                                <th style="padding: 10px;">Title</th>
+                                <th style="padding: 10px;">URL/Slug</th>
+                                <th style="padding: 10px;">Series</th>
+                                <th style="padding: 10px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($projects as $p): ?>
+                            <tr style="border-bottom: 1px solid #334155;">
+                                <td style="padding: 10px;"><?php echo $p['id']; ?></td>
+                                <td style="padding: 10px;"><?php echo h($p['title']); ?></td>
+                                <td style="padding: 10px;"><?php echo h($p['url']); ?></td>
+                                <td style="padding: 10px;"><?php echo h($p['series_name']); ?></td>
+                                <td style="padding: 10px;">
+                                    <a href="admin.php?edit_project=<?php echo $p['id']; ?>" style="color: #4ade80; text-decoration: none; margin-right: 10px;">Edit</a>
+                                    <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this project?');">
+                                        <input type="hidden" name="delete_project_id" value="<?php echo $p['id']; ?>">
+                                        <button type="submit" name="delete_project" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -714,6 +734,25 @@ if (isset($_GET['edit_project'])) {
 
             xhr.send(formData);
         }
+        // Collapsible Card Logic
+        const cardHeaders = document.querySelectorAll('.card h2');
+        cardHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                header.classList.toggle('active');
+                const content = header.nextElementSibling;
+                if (content.style.display === "none") {
+                    content.style.display = "block";
+                } else {
+                    content.style.display = "none";
+                }
+            });
+            
+            // If the header has the active class (from PHP Edit rendering), make sure it shows
+            if (header.classList.contains('active')) {
+                const content = header.nextElementSibling;
+                content.style.display = "block";
+            }
+        });
     </script>
 </body>
 </html>
