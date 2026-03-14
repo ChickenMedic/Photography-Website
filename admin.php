@@ -408,7 +408,7 @@ if (isset($_GET['edit_project'])) {
         <div class="header">
             <h1>Admin Dashboard</h1>
             <div>
-                <a href="index.php" target="_blank" class="btn-link" style="margin-right: 16px;">View Site</a>
+                <a href="/" target="_blank" class="btn-link" style="margin-right: 16px;">View Site</a>
                 <a href="admin.php?action=logout" class="btn-link">Logout</a>
             </div>
         </div>

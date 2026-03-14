@@ -77,11 +77,11 @@ $photoQuotes = [
     <!-- Navigation -->
     <nav class="glass-nav">
         <div class="nav-container">
-            <a href="#" class="logo"><span class="letter-span">S</span><span class="letter-span">D</span>.</a>
+            <a href="/" class="logo"><span class="letter-span">S</span><span class="letter-span">D</span>.</a>
             <ul class="nav-links">
-                <li><a href="#gallery">Gallery</a></li>
-                <li><a href="#projects">Projects</a></li>
-                <li><a href="#about">About</a></li>
+                <li><a href="/#gallery">Gallery</a></li>
+                <li><a href="/#projects">Projects</a></li>
+                <li><a href="/#about">About</a></li>
             </ul>
         </div>
     </nav>

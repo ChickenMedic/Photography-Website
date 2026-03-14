@@ -218,12 +218,12 @@ if (!$project) {
 
     <nav class="navbar" id="navbar">
         <div class="container">
-            <a href="index.php" class="logo"><span class="letter-span">S</span><span class="letter-span">D</span>.</a>
+            <a href="/" class="logo"><span class="letter-span">S</span><span class="letter-span">D</span>.</a>
         </div>
     </nav>
 
     <div class="container article-container">
-        <a href="index.php#projects" class="back-link">← Back to Projects</a>
+        <a href="/#projects" class="back-link">← Back to Projects</a>
         
         <header class="article-header animate-up">
             <h1><?php echo h($project['title']); ?></h1>
