@@ -145,37 +145,79 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_location'])) {
 }
 
 
-// Handle Photo Upload
+// Handle Photo Upload (Bulk Supported)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
     $location_id = !empty($_POST['location_id']) ? $_POST['location_id'] : null;
     $title = trim($_POST['title']);
     $description = trim($_POST['description']);
     $tags = trim($_POST['tags']);
-    $file = $_FILES['photo'];
-
-    if ($file['error'] === UPLOAD_ERR_OK) {
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    
+    // Check if files were actually uploaded
+    if (!empty($_FILES['photo']['name'][0])) {
+        $files = $_FILES['photo'];
+        $uploadCount = 0;
+        $errorCount = 0;
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
-        if (in_array($ext, $allowed)) {
-            $newFilename = uniqid('photo_') . '.' . $ext;
-            $destination = UPLOAD_DIR . $newFilename;
+        // Loop through each submitted file in the array
+        for ($i = 0; $i < count($files['name']); $i++) {
+            if ($files['error'][$i] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
 
-            if (move_uploaded_file($file['tmp_name'], $destination)) {
-                $stmt = $pdo->prepare("INSERT INTO photos (location_id, filename, title, description, tags) VALUES (?, ?, ?, ?, ?)");
-                if ($stmt->execute([$location_id, $newFilename, $title, $description, $tags])) {
-                    $message = "Photo uploaded successfully!";
+                if (in_array($ext, $allowed)) {
+                    $newFilename = uniqid('photo_') . '.' . $ext;
+                    $destination = UPLOAD_DIR . $newFilename;
+
+                    if (move_uploaded_file($files['tmp_name'][$i], $destination)) {
+                        $stmt = $pdo->prepare("INSERT INTO photos (location_id, filename, title, description, tags) VALUES (?, ?, ?, ?, ?)");
+                        if ($stmt->execute([$location_id, $newFilename, $title, $description, $tags])) {
+                            $uploadCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    } else {
+                        $errorCount++;
+                    }
                 } else {
-                    $error = "Database error inserting photo.";
+                    $errorCount++;
                 }
             } else {
-                $error = "Error moving uploaded file.";
+                $errorCount++;
+            }
+        }
+
+        if ($uploadCount > 0) {
+            $message = "Successfully uploaded $uploadCount photo(s)!";
+            if ($errorCount > 0) {
+                $message .= " (Failed to upload $errorCount photo(s)).";
             }
         } else {
-            $error = "Invalid file type. Allowed types: " . implode(', ', $allowed);
+            $error = "Failed to upload any photos. Please check file types.";
         }
     } else {
-         $error = "Error during file upload code: " . $file['error'];
+        $error = "Please select at least one photo to upload.";
+    }
+}
+
+// Handle Photo Deletion
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_photo'])) {
+    $id = $_POST['delete_photo_id'];
+    
+    // First, find the file name so we can delete the physical image off the server
+    $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
+    $stmt->execute([$id]);
+    $photoToDelete = $stmt->fetch();
+    
+    if ($photoToDelete && $photoToDelete['filename']) {
+        @unlink(UPLOAD_DIR . $photoToDelete['filename']);
+    }
+    
+    // Then, delete the database record
+    $stmt = $pdo->prepare("DELETE FROM photos WHERE id = ?");
+    if ($stmt->execute([$id])) {
+        $message = "Photo permanently deleted.";
+    } else {
+        $error = "Failed to delete photo from database.";
     }
 }
 
@@ -464,7 +506,7 @@ if (isset($_GET['edit_project'])) {
         </div>
 
         <div class="card">
-            <h2>Upload Single Photo</h2>
+            <h2>Upload Photos</h2>
             <form method="POST" action="admin.php" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="location_id">Select Location (Optional)</label>
@@ -476,8 +518,8 @@ if (isset($_GET['edit_project'])) {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="photo">Select Photo (JPG, PNG, WEBP)</label>
-                    <input type="file" name="photo" id="photo" required accept="image/jpeg, image/png, image/webp, image/gif">
+                    <label for="photo">Select Photos (Select multiple from phone camera roll)</label>
+                    <input type="file" name="photo[]" id="photo" required multiple accept="image/jpeg, image/png, image/webp, image/gif">
                 </div>
                 <div class="form-group">
                     <label for="title">Title (Optional)</label>
@@ -532,6 +574,42 @@ if (isset($_GET['edit_project'])) {
                     <button type="submit" name="create_project">Create Project</button>
                 <?php endif; ?>
             </form>
+        </div>
+
+        <div class="card">
+            <h2>Manage Photos</h2>
+            <p style="color: #94a3b8; margin-bottom: 20px;">Review and delete uploaded photos. Deleting a photo will permanently remove it from the server and the galleries.</p>
+            <div style="overflow-x:auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #475569;">
+                            <th style="padding: 10px;">Preview</th>
+                            <th style="padding: 10px;">ID</th>
+                            <th style="padding: 10px;">Filename</th>
+                            <th style="padding: 10px;">Title</th>
+                            <th style="padding: 10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($all_photos as $photoItem): ?>
+                        <tr style="border-bottom: 1px solid #334155;">
+                            <td style="padding: 10px;">
+                                <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
+                            </td>
+                            <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['id']; ?></td>
+                            <td style="padding: 10px; font-family: monospace; color: #cbd5e1;"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
+                            <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
+                            <td style="padding: 10px;">
+                                <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.');">
+                                    <input type="hidden" name="delete_photo_id" value="<?php echo $photoItem['id']; ?>">
+                                    <button type="submit" name="delete_photo" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="card">

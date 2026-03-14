@@ -89,11 +89,21 @@ $photoQuotes = [
     <!-- Hero Section -->
     <header class="hero" id="home">
         <div class="hero-slider">
-            <!-- User placeholder images: Add london.jpg, vienna.jpg, sicily.jpg, paris.jpg to assets/img -->
-            <div class="hero-slide active" style="background-image: url('assets/img/london.jpg');"></div>
-            <div class="hero-slide" style="background-image: url('assets/img/vienna.jpg');"></div>
-            <div class="hero-slide" style="background-image: url('assets/img/sicily.jpg');"></div>
-            <div class="hero-slide" style="background-image: url('assets/img/paris.jpg');"></div>
+            <?php
+            // Fetch 4 random photos for the hero background
+            $heroStmt = $pdo->query("SELECT filename FROM photos ORDER BY RAND() LIMIT 4");
+            $heroPhotos = $heroStmt->fetchAll();
+            
+            // Fallback colors if no photos exist yet
+            if (empty($heroPhotos)) {
+                echo '<div class="hero-slide active" style="background-color: #1e293b;"></div>';
+            } else {
+                foreach ($heroPhotos as $index => $hp) {
+                    $activeClass = ($index === 0) ? 'active' : '';
+                    echo '<div class="hero-slide ' . $activeClass . '" style="background-image: url(\'uploads/' . h($hp['filename']) . '\');"></div>';
+                }
+            }
+            ?>
             
             <!-- Floating Shapes Background -->
             <div class="shapes-container">
@@ -210,11 +220,13 @@ else: ?>
                         
                         <img src="uploads/<?php echo h($photo['filename']); ?>" alt="<?php echo h($photo['title']); ?>" loading="lazy">
                         
+                        <?php if (!empty($photo['title']) && strtolower(trim($photo['title'])) !== 'untitled'): ?>
                         <div class="overlay">
                             <div class="overlay-content">
-                                <h3><?php echo h($photo['title'] ?: 'Untitled'); ?></h3>
+                                <h3><?php echo h($photo['title']); ?></h3>
                             </div>
                         </div>
+                        <?php endif; ?>
                     </div>
                 <?php
         endif;
