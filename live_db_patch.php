@@ -22,6 +22,15 @@ try {
         echo "'tags' column already exists.<br>";
     }
 
+    // 3. Add 'content' to projects if it doesn't exist (CRITICAL for blog posts)
+    $stmt3 = $pdo->query("SHOW COLUMNS FROM projects LIKE 'content'");
+    if ($stmt3->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE projects ADD COLUMN content LONGTEXT NULL AFTER created_at;");
+        echo "Successfully added 'content' column to the 'projects' table.<br>";
+    } else {
+        echo "'content' column already exists.<br>";
+    }
+
     echo "<br><b>Database structural patch complete!</b> You can now use the admin panel to create projects.";
 
 } catch (PDOException $e) {
