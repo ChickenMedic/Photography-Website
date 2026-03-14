@@ -567,7 +567,7 @@ img {
 /* Projects Grid */
 .projects-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
     gap: 40px;
 }
 
@@ -627,20 +627,33 @@ img {
 .btn-primary {
     display: inline-block;
     padding: 12px 24px;
-    background: var(--accent);
-    color: var(--bg-primary);
+    background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+    background-size: 200% 200%;
+    color: white;
+    border: none;
     border-radius: 30px;
     font-weight: 600;
     font-size: 0.9rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     margin-top: auto;
     align-self: flex-start;
+    animation: gradientMove 3s ease infinite;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
 }
 
 .btn-primary:hover {
-    color: var(--bg-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(168, 85, 247, 0.6);
+}
+
+@media (max-width: 768px) {
+    .series-group {
+        padding: 25px 15px;
+    }
+    .projects-grid {
+        gap: 25px;
+    }
 }
 
 /* Location Gallery Modal & Grid System */
