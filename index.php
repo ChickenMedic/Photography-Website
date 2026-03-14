@@ -117,12 +117,12 @@ $photoQuotes = [
                 </span>
             </h1>
             <?php
-                // Get a random initial quote from the array
-                $initialQuote = $photoQuotes[array_rand($photoQuotes)];
-                $quoteParts = explode('|', $initialQuote);
-                $initialText = isset($quoteParts[0]) ? $quoteParts[0] : '';
-                $initialAuthor = isset($quoteParts[1]) ? $quoteParts[1] : '';
-            ?>
+// Get a random initial quote from the array
+$initialQuote = $photoQuotes[array_rand($photoQuotes)];
+$quoteParts = explode('|', $initialQuote);
+$initialText = isset($quoteParts[0]) ? $quoteParts[0] : '';
+$initialAuthor = isset($quoteParts[1]) ? $quoteParts[1] : '';
+?>
             <p class="subtitle animate-up delay-1" id="dynamic-quote-container">
                 <span id="dynamic-quote-text">"<?php echo h($initialText); ?>"</span><br>
                 <span id="dynamic-quote-author" class="quote-author"><?php echo h($initialAuthor); ?></span>
@@ -151,38 +151,43 @@ $photoQuotes = [
             <div class="container empty-state fade-in">
                 <p>No photos or locations have been added yet.</p>
             </div>
-        <?php else: ?>
+        <?php
+else: ?>
             <div class="masonry-grid container">
                 <!-- Location Cards -->
                 <?php foreach ($locations as $loc): ?>
-                    <?php 
-                    // Skip inactive locations
-                    if (isset($loc['is_active']) && $loc['is_active'] == 0) continue;
+                    <?php
+        // Skip inactive locations
+        if (isset($loc['is_active']) && $loc['is_active'] == 0)
+            continue;
 
-                    // Find first photo for cover and count photos
-                    $cover = null;
-                    $photoCount = 0;
-                    foreach($photos as $p) {
-                        if ($p['location_id'] == $loc['id']) { 
-                            if (!$cover) {
-                                $cover = $p['filename']; 
-                            }
-                            $photoCount++;
-                        }
-                    }
-                    
-                    // Skip if no photos
-                    if ($photoCount === 0) continue;
-                    ?>
+        // Find first photo for cover and count photos
+        $cover = null;
+        $photoCount = 0;
+        foreach ($photos as $p) {
+            if ($p['location_id'] == $loc['id']) {
+                if (!$cover) {
+                    $cover = $p['filename'];
+                }
+                $photoCount++;
+            }
+        }
+
+        // Skip if no photos
+        if ($photoCount === 0)
+            continue;
+?>
                     <div class="masonry-item location-card fade-in" 
                          data-location-id="<?php echo $loc['id']; ?>" 
                          data-name="<?php echo h($loc['name']); ?>">
                         
                         <?php if ($cover): ?>
                             <img src="uploads/<?php echo h($cover); ?>" alt="<?php echo h($loc['name']); ?>" loading="lazy">
-                        <?php else: ?>
+                        <?php
+        else: ?>
                             <div style="width: 100%; height: 300px; background: #1e293b; display:flex; align-items:center; justify-content:center; color: #64748b;">No Photos</div>
-                        <?php endif; ?>
+                        <?php
+        endif; ?>
                         
                         <div class="overlay">
                             <div class="overlay-content">
@@ -190,13 +195,14 @@ $photoQuotes = [
                             </div>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                <?php
+    endforeach; ?>
 
                 <?php
-                // Display photos not assigned to any location as individual items (optional, but good for UX)
-                foreach ($photos as $photo): 
-                    if ($photo['location_id'] === null):
-                ?>
+    // Display photos not assigned to any location as individual items (optional, but good for UX)
+    foreach ($photos as $photo):
+        if ($photo['location_id'] === null):
+?>
                     <div class="masonry-item photo-item fade-in" 
                          data-image="uploads/<?php echo h($photo['filename']); ?>"
                          data-title="<?php echo h($photo['title'] ?: 'Untitled'); ?>"
@@ -210,12 +216,13 @@ $photoQuotes = [
                             </div>
                         </div>
                     </div>
-                <?php 
-                    endif;
-                endforeach; 
-                ?>
+                <?php
+        endif;
+    endforeach;
+?>
             </div>
-        <?php endif; ?>
+        <?php
+endif; ?>
     </section>
 
     <!-- Projects Section -->
@@ -229,22 +236,25 @@ $photoQuotes = [
                 <div class="empty-state fade-in">
                     <p>No projects have been added yet.</p>
                 </div>
-            <?php else: ?>
+            <?php
+else: ?>
                 <?php
-                // Group projects by series
-                $groupedProjects = [];
-                $ungroupedProjects = [];
+    // Group projects by series
+    $groupedProjects = [];
+    $ungroupedProjects = [];
 
-                foreach ($projects as $project) {
-                    $series = trim($project['series_name']);
-                    if (!empty($series)) {
-                        if (!isset($groupedProjects[$series])) $groupedProjects[$series] = [];
-                        $groupedProjects[$series][] = $project;
-                    } else {
-                        $ungroupedProjects[] = $project;
-                    }
-                }
-                ?>
+    foreach ($projects as $project) {
+        $series = trim($project['series_name']);
+        if (!empty($series)) {
+            if (!isset($groupedProjects[$series]))
+                $groupedProjects[$series] = [];
+            $groupedProjects[$series][] = $project;
+        }
+        else {
+            $ungroupedProjects[] = $project;
+        }
+    }
+?>
 
                 <!-- Render Grouped Projects -->
                 <?php foreach ($groupedProjects as $seriesName => $seriesProjects): ?>
@@ -258,22 +268,27 @@ $photoQuotes = [
                                         <div class="project-img-wrapper">
                                             <img src="uploads/<?php echo h($project['cover_image']); ?>" alt="<?php echo h($project['title']); ?>" loading="lazy" class="project-img">
                                         </div>
-                                    <?php else: ?>
+                                    <?php
+            else: ?>
                                         <div class="project-img-wrapper fallback-bg"></div>
-                                    <?php endif; ?>
+                                    <?php
+            endif; ?>
                                     
                                     <div class="project-info">
                                         <h3><?php echo h($project['title']); ?></h3>
                                         <p><?php echo h($project['description']); ?></p>
                                         <?php if ($project['url']): ?>
                                             <a href="<?php echo h($project['url']); ?>" class="btn-primary">View Project</a>
-                                        <?php endif; ?>
+                                        <?php
+            endif; ?>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
+                            <?php
+        endforeach; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                <?php
+    endforeach; ?>
 
                 <!-- Render Ungrouped Projects -->
                 <?php if (!empty($ungroupedProjects)): ?>
@@ -284,22 +299,28 @@ $photoQuotes = [
                                     <div class="project-img-wrapper">
                                         <img src="uploads/<?php echo h($project['cover_image']); ?>" alt="<?php echo h($project['title']); ?>" loading="lazy" class="project-img">
                                     </div>
-                                <?php else: ?>
+                                <?php
+            else: ?>
                                     <div class="project-img-wrapper fallback-bg"></div>
-                                <?php endif; ?>
+                                <?php
+            endif; ?>
                                 
                                 <div class="project-info">
                                     <h3><?php echo h($project['title']); ?></h3>
                                     <p><?php echo h($project['description']); ?></p>
                                     <?php if ($project['url']): ?>
                                         <a href="<?php echo h($project['url']); ?>" class="btn-primary">View Project</a>
-                                    <?php endif; ?>
+                                    <?php
+            endif; ?>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
+                        <?php
+        endforeach; ?>
                     </div>
-                <?php endif; ?>
-            <?php endif; ?>
+                <?php
+    endif; ?>
+            <?php
+endif; ?>
         </div>
     </section>
 
@@ -310,9 +331,9 @@ $photoQuotes = [
         </div>
         <div class="container">
             <div class="fade-in" style="max-width: 800px; line-height: 1.8; color: var(--text-secondary); font-size: 1.1rem;">
-                <p style="margin-bottom: 20px;">Hi, I'm Sam Dawson, a photographer with a passion for capturing the world's beauty, one frame at a time. My journey in photography began with a simple curiosity and has evolved into a lifelong pursuit of light and shadow.</p>
-                <p>Through my lens, I explore landscapes, cityscapes, and the quiet moments that often go unnoticed. This portfolio is a curated collection of my favorite works from various locations around the globe.</p>
-                <p>Feel free to reach out for collaborations or just to say hello!</p>
+                <p style="margin-bottom: 20px;">Hi, I’m Sam Dawson. I work as a subsurface engineer and spend a lot of my free time taking photos and building projects. 
+                    My photography is mainly landscapes and city scenes from places I’ve explored. 
+                    This website acts as both a portfolio and a place where I share my work. Thanks for stopping by!</p>
             </div>
         </div>
     </section>
