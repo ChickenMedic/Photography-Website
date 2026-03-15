@@ -535,6 +535,9 @@ if (isset($_GET['edit_project'])) {
         <div class="card">
             <h2>Upload Photos</h2>
             <div class="card-content" style="display: none;">
+                <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 20px;">
+                    <strong>Server Limits:</strong> Max Single Photo: <?php echo ini_get('upload_max_filesize'); ?> | Max Total Batch: <?php echo ini_get('post_max_size'); ?> | Max Photos per Batch: <?php echo ini_get('max_file_uploads'); ?>
+                </p>
                 <form method="POST" action="admin.php" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="location_id">Select Location (Optional)</label>
