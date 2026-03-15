@@ -9,6 +9,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     exit;
 }
 
+$message = '';
+$error = '';
+
+// Check if a massive bulk upload exceeded PHP's maximum POST limits, causing a silent failure
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+    $error = "Upload Failed: You attached too much data at once for the server to process. Please try uploading fewer or smaller photos per batch.";
+}
+
 // Handle Login
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
     $username = trim($_POST['username']);
@@ -115,9 +123,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax_upload_location']
     exit;
 }
 
-$message = '';
-$error = '';
-
 // Handle Gallery Toggle
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['toggle_location'])) {
     $loc_id = $_POST['location_id'];
@@ -157,6 +162,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
         $files = $_FILES['photo'];
         $uploadCount = 0;
         $errorCount = 0;
+        $fileErrors = [];
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
         // Loop through each submitted file in the array
@@ -174,25 +180,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
                             $uploadCount++;
                         } else {
                             $errorCount++;
+                            $fileErrors[] = $files['name'][$i] . " (Database error)";
                         }
                     } else {
                         $errorCount++;
+                        $fileErrors[] = $files['name'][$i] . " (Move failed)";
                     }
                 } else {
                     $errorCount++;
+                    $fileErrors[] = $files['name'][$i] . " (Invalid file format: $ext)";
                 }
             } else {
                 $errorCount++;
+                if ($files['error'][$i] === UPLOAD_ERR_INI_SIZE || $files['error'][$i] === UPLOAD_ERR_FORM_SIZE) {
+                    $fileErrors[] = $files['name'][$i] . " (File too large for server)";
+                } else {
+                    $fileErrors[] = $files['name'][$i] . " (Error Code: " . $files['error'][$i] . ")";
+                }
             }
         }
 
         if ($uploadCount > 0) {
             $message = "Successfully uploaded $uploadCount photo(s)!";
             if ($errorCount > 0) {
-                $message .= " (Failed to upload $errorCount photo(s)).";
+                $message .= " Failed to upload: " . implode(', ', $fileErrors);
             }
         } else {
-            $error = "Failed to upload any photos. Please check file types.";
+            $error = "Failed to upload photos: " . implode(', ', $fileErrors);
+            if (empty($errorCount)) $error = "No valid files selected.";
         }
     } else {
         $error = "Please select at least one photo to upload.";
