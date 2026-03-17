@@ -299,21 +299,24 @@ document.addEventListener('DOMContentLoaded', () => {
             'fx-fold-top', 'fx-fold-bottom', 'fx-slide-down-zoom', 'fx-squeeze', 'fx-expand'
         ];
 
-        let currentFeaturedIndex = 0;
         let currentImgElement = null;
+        let lastShownIndex = -1;
 
         function showNextFeaturedPhoto() {
             if (allPhotosDB.length === 0) return;
 
+            let currentFeaturedIndex = Math.floor(Math.random() * allPhotosDB.length);
+            if (allPhotosDB.length > 1 && currentFeaturedIndex === lastShownIndex) {
+                 currentFeaturedIndex = (currentFeaturedIndex + 1) % allPhotosDB.length;
+            }
+
             const photo = allPhotosDB[currentFeaturedIndex];
-            currentFeaturedIndex = (currentFeaturedIndex + 1) % allPhotosDB.length;
 
             if (!photo || !photo.filename) {
-                showNextFeaturedPhoto(); // skip recursively
+                setTimeout(showNextFeaturedPhoto, 100); // Try another random photo
                 return;
             }
 
-            // Load image to determine aspect ratio device filtering
             const tempImg = new Image();
             tempImg.src = 'uploads/' + photo.filename;
             tempImg.onload = function() {
@@ -323,12 +326,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Filter logic
                 // If Desktop + Portrait, or Mobile + Landscape -> skip it
                 if ((isDesktop && !isLandscape) || (!isDesktop && isLandscape)) {
-                    // Skip and recursively call next
-                    showNextFeaturedPhoto();
+                    setTimeout(showNextFeaturedPhoto, 100); // Try another random photo
                     return;
                 }
 
-                // If check passed, show it
+                lastShownIndex = currentFeaturedIndex;
+
                 const imgElement = document.createElement('img');
                 imgElement.src = tempImg.src;
                 imgElement.className = 'slideshow-img incoming';
@@ -348,17 +351,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     imgElement.classList.add('active');
                     imgElement.classList.remove(randomFx); // Remove animation class to prevent re-trigger
                     currentImgElement = imgElement;
+                    
+                    // Maintain image on screen for minimum time after transition
+                    setTimeout(showNextFeaturedPhoto, 3000);
                 }, 1500); // 1.5s is the duration of the animations
             };
             tempImg.onerror = function() { // Fallback if image load fails
-                showNextFeaturedPhoto();
+                setTimeout(showNextFeaturedPhoto, 100);
             }
         }
 
         // Start slideshow immediately with first photo
         showNextFeaturedPhoto();
-        // Cycle every 4.5 seconds to allow time for reading/viewing
-        setInterval(showNextFeaturedPhoto, 4500);
     }
 
     // 8. Code Block Copy Buttons

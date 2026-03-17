@@ -137,7 +137,7 @@ $initialAuthor = isset($quoteParts[1]) ? $quoteParts[1] : '';
     <!-- Gallery Section (Masonry) -->
     <section id="gallery" class="section">
         <div class="container section-header" style="display: flex; align-items: center; gap: 30px;">
-            <h2 class="fade-in">Selected Works</h2>
+            <h2 class="fade-in">Photography</h2>
             <button id="random-pic-btn" class="btn-primary fade-in" style="padding: 10px 20px; font-size: 0.9rem;">Surprise Me</button>
         </div>
         
@@ -161,21 +161,22 @@ else: ?>
         if (isset($loc['is_active']) && $loc['is_active'] == 0)
             continue;
 
-        // Find first photo for cover and count photos
-        $cover = null;
-        $photoCount = 0;
+        // Find all photos for this location
+        $locationPhotos = [];
         foreach ($photos as $p) {
             if ($p['location_id'] == $loc['id']) {
-                if (!$cover) {
-                    $cover = $p['filename'];
-                }
-                $photoCount++;
+                $locationPhotos[] = $p['filename'];
             }
         }
+        
+        $photoCount = count($locationPhotos);
 
         // Skip if no photos
         if ($photoCount === 0)
             continue;
+            
+        // Randomize the cover image
+        $cover = $locationPhotos[array_rand($locationPhotos)];
 ?>
                     <div class="masonry-item location-card fade-in" 
                          data-location-id="<?php echo $loc['id']; ?>" 
@@ -189,9 +190,15 @@ else: ?>
                         <?php
         endif; ?>
                         
+                        <!-- Custom persistent title for location card -->
+                        <div style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); position: absolute; bottom: 0; left: 0; right: 0; padding: 25px 25px 15px 25px; z-index: 2; pointer-events: none;">
+                            <h3 style="color: #fff; font-size: 1.5rem; margin: 0; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.8));"><?php echo h($loc['name']); ?></h3>
+                            <span style="color: #a3a3a3; font-size: 0.85rem; padding-top: 5px; display: block; filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.8));"><?php echo $photoCount; ?> Photo<?php echo $photoCount !== 1 ? 's' : ''; ?></span>
+                        </div>
+                        
                         <div class="overlay">
-                            <div class="overlay-content">
-                                <h3><?php echo h($loc['name']); ?></h3>
+                            <div class="overlay-content" style="padding-bottom: 50px;">
+                                <span style="color: #fff; opacity: 0.8; font-size: 1rem;">View Gallery &rarr;</span>
                             </div>
                         </div>
                     </div>
