@@ -275,6 +275,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_photo'])) {
     }
 }
 
+// Handle Individual Photo WebP Conversion
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['convert_photo_webp'])) {
+    $id = $_POST['convert_photo_id'];
+    
+    $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
+    $stmt->execute([$id]);
+    $photoToConvert = $stmt->fetch();
+    
+    if ($photoToConvert && $photoToConvert['filename']) {
+        $filepath = UPLOAD_DIR . $photoToConvert['filename'];
+        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+        
+        if (file_exists($filepath) && in_array($ext, ['jpg', 'jpeg', 'png'])) {
+            $newFilename = uniqid('photo_') . '.webp';
+            $newFilepath = UPLOAD_DIR . $newFilename;
+            $image = null;
+            
+            if ($ext === 'jpg' || $ext === 'jpeg') {
+                $image = @imagecreatefromjpeg($filepath);
+            } elseif ($ext === 'png') {
+                $image = @imagecreatefrompng($filepath);
+                if ($image) {
+                    imagepalettetotruecolor($image);
+                    imagealphablending($image, true);
+                    imagesavealpha($image, true);
+                }
+            }
+            
+            if ($image !== null) {
+                if (imagewebp($image, $newFilepath, 80)) {
+                    $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
+                    if ($upStmt->execute([$newFilename, $id])) {
+                        @unlink($filepath);
+                        $message = "Photo perfectly compressed to WebP format!";
+                    } else {
+                        $error = "Failed to update database with WebP photo.";
+                        @unlink($newFilepath); // Clean up if DB fails
+                    }
+                } else {
+                    $error = "Failed to encode WebP image.";
+                }
+                imagedestroy($image);
+            } else {
+                $error = "Failed to open original image for conversion.";
+            }
+        } else {
+            $error = "File doesn't exist or is already optimized.";
+        }
+    } else {
+        $error = "Failed to find photo to convert.";
+    }
+}
+
 // Handle Project Creation
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     $title = trim($_POST['project_title']);
@@ -711,6 +764,16 @@ if (isset($_GET['edit_project'])) {
                                 <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
                                 <td style="padding: 10px; font-family: monospace; font-size: 0.9rem;"><?php echo $sizeStr; ?></td>
                                 <td style="padding: 10px;">
+                                    <?php 
+                                        $ext = strtolower(pathinfo($photoItem['filename'], PATHINFO_EXTENSION));
+                                        if (in_array($ext, ['jpg', 'jpeg', 'png'])):
+                                    ?>
+                                    <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;">
+                                        <input type="hidden" name="convert_photo_id" value="<?php echo $photoItem['id']; ?>">
+                                        <button type="submit" name="convert_photo_webp" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Convert to WebP</button>
+                                    </form>
+                                    <?php endif; ?>
+                                    
                                     <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.');">
                                         <input type="hidden" name="delete_photo_id" value="<?php echo $photoItem['id']; ?>">
                                         <button type="submit" name="delete_photo" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
