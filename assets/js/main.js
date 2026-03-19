@@ -243,10 +243,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContainer = document.getElementById('gallery-container');
     const closeGalleryBtn = document.querySelector('.close-gallery-btn');
     const galleryTitle = document.getElementById('gallery-title');
+    
+    let clearGalleryTimeout;
 
     locationCards.forEach(card => {
         card.addEventListener('click', () => {
             if (typeof allPhotosDB === 'undefined') return;
+            
+            clearTimeout(clearGalleryTimeout);
 
             const locId = card.getAttribute('data-location-id');
             const locName = card.getAttribute('data-name');
@@ -282,8 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Apply Random Layout (1 to 8)
-            const randomLayoutNum = Math.floor(Math.random() * 8) + 1;
+            // Apply Random Layout (Skip 3 - Horizontal Scroll)
+            const allowedLayouts = [1, 2, 4, 5, 6, 7, 8];
+            const randomLayoutNum = allowedLayouts[Math.floor(Math.random() * allowedLayouts.length)];
             galleryContainer.className = 'gallery-container gallery-layout-' + randomLayoutNum;
 
             galleryModal.classList.add('active');
@@ -296,7 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
         closeGalleryBtn.addEventListener('click', () => {
             galleryModal.classList.remove('active');
             document.body.style.overflow = 'auto';
-            setTimeout(() => { galleryContainer.innerHTML = ''; }, 400);
+            clearTimeout(clearGalleryTimeout);
+            clearGalleryTimeout = setTimeout(() => { galleryContainer.innerHTML = ''; }, 400); 
         });
     }
 

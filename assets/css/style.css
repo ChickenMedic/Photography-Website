@@ -677,7 +677,7 @@ img {
     padding: 100px 0 60px;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 100;
 }
 
 .gallery-header::before {
@@ -725,6 +725,13 @@ img {
     opacity: 1;
     pointer-events: auto;
     transition-delay: 0.4s; /* wait for modal to slide up mostly */
+}
+
+@media (max-width: 768px) {
+    .close-gallery-btn {
+        top: 80px;
+        right: 20px;
+    }
 }
 
 .close-gallery-btn:hover {
@@ -798,6 +805,13 @@ img {
     padding-bottom: 100px;
 }
 
+/* Guarantee masonry images determine their own natural height */
+.gallery-layout-1 .photo-item img,
+.masonry-item.photo-item img {
+    position: relative;
+    height: auto;
+}
+
 .gallery-layout-1 .photo-item {
     break-inside: avoid;
     margin-bottom: 20px;
@@ -815,6 +829,14 @@ img {
 
 .gallery-layout-2 .photo-item {
     aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.gallery-layout-2 .photo-item img {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
 }
 
 /* Layout 3: Horizontal Scroll Track */
@@ -860,7 +882,13 @@ img {
 }
 
 .gallery-layout-4 .photo-item {
-    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.gallery-layout-4 .photo-item img {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .gallery-layout-4 .large-item {
