@@ -252,6 +252,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
         $error = "Please select at least one photo to upload.";
     }
 }
+// Handle Bulk Photo Deletion
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bulk_delete_photos']) && !empty($_POST['bulk_delete_ids'])) {
+    $ids = $_POST['bulk_delete_ids'];
+    $ids = array_filter($ids, 'is_numeric');
+    if (!empty($ids)) {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        
+        $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        $photosToDelete = $stmt->fetchAll();
+        
+        foreach ($photosToDelete as $ptd) {
+            @unlink(UPLOAD_DIR . $ptd['filename']);
+        }
+        
+        $stmt = $pdo->prepare("DELETE FROM photos WHERE id IN ($placeholders)");
+        if ($stmt->execute($ids)) {
+            $message = "Successfully deleted " . count($ids) . " selected photo(s).";
+        } else {
+            $error = "Failed to bulk delete photos from database.";
+        }
+    }
+}
 
 // Handle Photo Deletion
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_photo'])) {
@@ -389,6 +412,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rotate_photo'])) {
         }
     } else {
         $error = "Failed to find photo to rotate.";
+    }
+
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => empty($error) ? 'success' : 'error', 'message' => empty($error) ? ($message ?? '') : $error]);
+        exit;
     }
 }
 
@@ -663,7 +692,7 @@ if (isset($_GET['edit_project'])) {
                 <p style="color: #94a3b8; margin-bottom: 20px;">Drag and drop photo files directly onto a location below to upload them.</p>
                 <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
                     <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #f8fafc;">
-                        <input type="checkbox" id="global_convert_webp" value="1" checked style="width: auto; margin-right: 15px; transform: scale(1.2);">
+                        <input type="checkbox" id="global_convert_webp" value="1" style="width: auto; margin-right: 15px; transform: scale(1.2);">
                         Compress dropped photos to WebP format (Recommended)
                     </label>
                 </div>
@@ -706,7 +735,7 @@ if (isset($_GET['edit_project'])) {
                 <form method="POST" action="admin.php" enctype="multipart/form-data">
                     <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
                         <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #f8fafc;">
-                            <input type="checkbox" name="convert_webp" value="1" checked style="width: auto; margin-right: 15px; transform: scale(1.2);">
+                            <input type="checkbox" name="convert_webp" value="1" style="width: auto; margin-right: 15px; transform: scale(1.2);">
                             Compress these photos to WebP format (Recommended)
                         </label>
                     </div>
@@ -749,7 +778,7 @@ if (isset($_GET['edit_project'])) {
                     <?php endif; ?>
                     <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
                         <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #f8fafc;">
-                            <input type="checkbox" name="convert_webp_proj" value="1" checked style="width: auto; margin-right: 15px; transform: scale(1.2);">
+                            <input type="checkbox" name="convert_webp_proj" value="1" style="width: auto; margin-right: 15px; transform: scale(1.2);">
                             Compress cover image to WebP format (Recommended)
                         </label>
                     </div>
@@ -792,9 +821,11 @@ if (isset($_GET['edit_project'])) {
             <div class="card-content" style="display: none;">
                 <p style="color: #94a3b8; margin-bottom: 20px;">Review and delete uploaded photos. Deleting a photo will permanently remove it from the server and the galleries.</p>
                 <div style="overflow-x:auto;">
+                    <form method="POST" action="admin.php" id="bulkDeleteForm" onsubmit="return confirm('Are you completely sure you want to permanently delete all selected photos? This cannot be undone.');">
                     <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr style="border-bottom: 1px solid #475569;">
+                                <th style="padding: 10px; width: 40px;"><input type="checkbox" id="selectAllPhotos" onclick="toggleAllCheckboxes(this)"></th>
                                 <th style="padding: 10px;">Preview</th>
                                 <th style="padding: 10px;">ID</th>
                                 <th style="padding: 10px;">Filename</th>
@@ -820,6 +851,7 @@ if (isset($_GET['edit_project'])) {
                                 }
                             ?>
                             <tr style="border-bottom: 1px solid #334155;">
+                                <td style="padding: 10px;"><input type="checkbox" name="bulk_delete_ids[]" value="<?php echo $photoItem['id']; ?>" class="photo-checkbox"></td>
                                 <td style="padding: 10px;">
                                     <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
                                 </td>
@@ -839,9 +871,10 @@ if (isset($_GET['edit_project'])) {
                                     <?php endif; ?>
                                     
                                     <?php if (in_array(strtolower(pathinfo($photoItem['filename'], PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'])): ?>
-                                    <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;">
+                                    <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;" class="ajax-rotate-form">
                                         <input type="hidden" name="rotate_photo_id" value="<?php echo $photoItem['id']; ?>">
-                                        <button type="submit" name="rotate_photo" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Rotate 90&deg;</button>
+                                        <input type="hidden" name="rotate_photo" value="1">
+                                        <button type="button" onclick="handleAjaxRotate(this)" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Rotate 90&deg;</button>
                                     </form>
                                     <?php endif; ?>
                                     
@@ -854,6 +887,10 @@ if (isset($_GET['edit_project'])) {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" name="bulk_delete_photos" style="background: #ef4444;">Delete Selected Photos</button>
+                    </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -896,6 +933,37 @@ if (isset($_GET['edit_project'])) {
     </div>
 
     <script>
+        function toggleAllCheckboxes(source) {
+            const checkboxes = document.querySelectorAll('.photo-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        function handleAjaxRotate(btn) {
+            const form = btn.closest('form');
+            const formData = new FormData(form);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Rotating...';
+            btn.disabled = true;
+            
+            fetch('admin.php', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(() => {
+                const tr = form.closest('tr');
+                const img = tr.querySelector('img');
+                if (img) {
+                    const url = new URL(img.src, window.location.origin);
+                    url.searchParams.set('t', new Date().getTime());
+                    img.src = url.toString();
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }).catch(() => {
+                btn.innerHTML = 'Error';
+            });
+        }
+
         // Drag and drop logic for Locations
         const dropzones = document.querySelectorAll('.location-dropzone');
         
