@@ -69,7 +69,7 @@ $photoQuotes = [
     <!-- Google Fonts for typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&family=Playfair+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Cinzel&family=Dancing+Script&family=Great+Vibes&family=Oswald:wght@500;700&family=Roboto+Mono:wght@400;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&family=Playfair+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Cinzel&family=Dancing+Script&family=Great+Vibes&family=Oswald:wght@500;700&family=Roboto+Mono:wght@400;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Lora:ital@0;1&family=Bungee&family=Creepster&family=Press+Start+2P&family=Space+Mono&family=Righteous&family=Silkscreen&family=Special+Elite&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>">
 </head>
 <body>
@@ -212,7 +212,7 @@ else: ?>
 ?>
                     <div class="masonry-item photo-item fade-in" 
                          data-image="uploads/<?php echo h($photo['filename']); ?>"
-                         data-title="<?php echo h($photo['title'] ?: 'Untitled'); ?>"
+                         data-title="<?php echo h($photo['title'] ?: ''); ?>"
                          data-desc="<?php echo h($photo['description']); ?>">
                         
                         <img src="uploads/<?php echo h($photo['filename']); ?>" alt="<?php echo h($photo['title']); ?>" loading="lazy">
@@ -362,8 +362,10 @@ endif; ?>
     <!-- Dynamic Location Gallery Modal -->
     <div id="location-gallery-modal" class="location-gallery-modal">
         <button class="close-gallery-btn">&times;</button>
-        <div class="gallery-header container">
-            <h2 id="gallery-title">Location</h2>
+        <div class="gallery-header">
+            <div class="container">
+                <h2 id="gallery-title">Location</h2>
+            </div>
         </div>
         <div id="gallery-container" class="container">
             <!-- Photos dynamically injected here -->

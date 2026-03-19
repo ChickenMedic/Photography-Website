@@ -168,7 +168,18 @@ document.addEventListener('DOMContentLoaded', () => {
             "'Great Vibes', cursive",
             "'Outfit', sans-serif",
             "'Oswald', sans-serif",
-            "'Permanent Marker', cursive"
+            "'Permanent Marker', cursive",
+            "'Roboto Mono', monospace",
+            "'Lora', serif",
+            "'Anton', sans-serif",
+            "'Bebas Neue', sans-serif",
+            "'Bungee', cursive",
+            "'Creepster', cursive",
+            "'Press Start 2P', monospace",
+            "'Space Mono', monospace",
+            "'Righteous', cursive",
+            "'Silkscreen', monospace",
+            "'Special Elite', monospace"
         ];
         
         // Randomize letter spans continuously
@@ -220,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const randomPhoto = allPhotosDB[Math.floor(Math.random() * allPhotosDB.length)];
             openLightbox(
                 'uploads/' + randomPhoto.filename,
-                randomPhoto.title || 'Untitled',
+                randomPhoto.title || '',
                 randomPhoto.description || ''
             );
         });
@@ -255,14 +266,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (index % 7 === 0) item.classList.add('wide-item');
 
                     item.setAttribute('data-image', 'uploads/' + photo.filename);
-                    item.setAttribute('data-title', photo.title || 'Untitled');
+                    item.setAttribute('data-title', photo.title || '');
                     item.setAttribute('data-desc', photo.description || '');
 
+                    const titleHtml = photo.title ? `<h3>${photo.title}</h3>` : '';
                     item.innerHTML = `
                         <img src="uploads/${photo.filename}" alt="${photo.title || ''}" loading="lazy">
                         <div class="overlay">
                             <div class="overlay-content">
-                                <h3>${photo.title || 'Untitled'}</h3>
+                                ${titleHtml}
                             </div>
                         </div>
                     `;
