@@ -77,6 +77,45 @@ if (!is_dir(UPLOAD_DIR)) {
     mkdir(UPLOAD_DIR, 0755, true);
 }
 
+/**
+ * Automatically converts JPG/PNG uploads to WebP for massive file size reduction.
+ * Falls back to standard upload if the format is unsupported or GD is missing.
+ */
+function processImageUpload($tmpPath, $originalExt, $destinationFolder, $prefix, $convertToWebp = true) {
+    $ext = strtolower($originalExt);
+    if (!$convertToWebp || !function_exists('imagewebp') || $ext === 'webp' || $ext === 'gif') {
+        $filename = uniqid($prefix) . '.' . $ext;
+        return move_uploaded_file($tmpPath, $destinationFolder . $filename) ? $filename : false;
+    }
+
+    $filename = uniqid($prefix) . '.webp';
+    $destination = $destinationFolder . $filename;
+    $info = @getimagesize($tmpPath);
+    if (!$info) return false;
+
+    $image = null;
+    if ($info['mime'] == 'image/jpeg') {
+        $image = @imagecreatefromjpeg($tmpPath);
+    } elseif ($info['mime'] == 'image/png') {
+        $image = @imagecreatefrompng($tmpPath);
+        if ($image) {
+            imagepalettetotruecolor($image);
+            imagealphablending($image, true);
+            imagesavealpha($image, true);
+        }
+    }
+
+    if ($image !== null) {
+        $success = imagewebp($image, $destination, 80); // 80% is the optimal WebP quality
+        imagedestroy($image);
+        return $success ? $filename : false;
+    }
+
+    // Ultimate fallback
+    $filename = uniqid($prefix) . '.' . $ext;
+    return move_uploaded_file($tmpPath, $destinationFolder . $filename) ? $filename : false;
+}
+
 // Auto-run DB migrations for locations
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS locations (
@@ -100,6 +139,7 @@ try {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax_upload_location'])) {
     header('Content-Type: application/json');
     $location_id = $_POST['location_id'];
+    $convertToWebp = isset($_POST['convert_webp']) && $_POST['convert_webp'] === '1';
     $file = $_FILES['photo'];
 
     if ($file['error'] === UPLOAD_ERR_OK) {
@@ -107,12 +147,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax_upload_location']
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
         if (in_array($ext, $allowed)) {
-            $newFilename = uniqid('photo_') . '.' . $ext;
-            $destination = UPLOAD_DIR . $newFilename;
+            $finalFilename = processImageUpload($file['tmp_name'], $ext, UPLOAD_DIR, 'photo_', $convertToWebp);
 
-            if (move_uploaded_file($file['tmp_name'], $destination)) {
+            if ($finalFilename) {
                 $stmt = $pdo->prepare("INSERT INTO photos (location_id, filename) VALUES (?, ?)");
-                if ($stmt->execute([$location_id, $newFilename])) {
+                if ($stmt->execute([$location_id, $finalFilename])) {
                     echo json_encode(["status" => "success", "message" => "Photo uploaded"]);
                     exit;
                 }
@@ -156,6 +195,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
     $title = trim($_POST['title']);
     $description = trim($_POST['description']);
     $tags = trim($_POST['tags']);
+    $convertToWebp = isset($_POST['convert_webp']) ? true : false;
     
     // Check if files were actually uploaded
     if (!empty($_FILES['photo']['name'][0])) {
@@ -171,12 +211,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
                 $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
 
                 if (in_array($ext, $allowed)) {
-                    $newFilename = uniqid('photo_') . '.' . $ext;
-                    $destination = UPLOAD_DIR . $newFilename;
+                    $finalFilename = processImageUpload($files['tmp_name'][$i], $ext, UPLOAD_DIR, 'photo_', $convertToWebp);
 
-                    if (move_uploaded_file($files['tmp_name'][$i], $destination)) {
+                    if ($finalFilename) {
                         $stmt = $pdo->prepare("INSERT INTO photos (location_id, filename, title, description, tags) VALUES (?, ?, ?, ?, ?)");
-                        if ($stmt->execute([$location_id, $newFilename, $title, $description, $tags])) {
+                        if ($stmt->execute([$location_id, $finalFilename, $title, $description, $tags])) {
                             $uploadCount++;
                         } else {
                             $errorCount++;
@@ -184,7 +223,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_photo'])) {
                         }
                     } else {
                         $errorCount++;
-                        $fileErrors[] = $files['name'][$i] . " (Move failed)";
+                        $fileErrors[] = $files['name'][$i] . " (Upload/Conversion failed)";
                     }
                 } else {
                     $errorCount++;
@@ -247,14 +286,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     
     $coverFilename = null;
 
+    $convertToWebp = isset($_POST['convert_webp_proj']) ? true : false;
+
     if ($file['error'] === UPLOAD_ERR_OK) {
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg', 'jpeg', 'png', 'webp'];
         if (in_array($ext, $allowed)) {
-            $coverFilename = uniqid('proj_cover_') . '.' . $ext;
-            if (!move_uploaded_file($file['tmp_name'], UPLOAD_DIR . $coverFilename)) {
-                $error = "Failed to upload cover image.";
-                $coverFilename = null;
+            $coverFilename = processImageUpload($file['tmp_name'], $ext, UPLOAD_DIR, 'proj_cover_', $convertToWebp);
+            if (!$coverFilename) {
+                $error = "Failed to upload or convert cover image.";
             }
         }
     }
@@ -302,16 +342,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_project'])) {
     $oldProj = $stmt->fetch();
     $coverFilename = $oldProj ? $oldProj['cover_image'] : null;
 
+    $convertToWebp = isset($_POST['convert_webp_proj']) ? true : false;
+    
     if ($file['error'] === UPLOAD_ERR_OK) {
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg', 'jpeg', 'png', 'webp'];
         if (in_array($ext, $allowed)) {
-            $newFilename = uniqid('proj_cover_') . '.' . $ext;
-            if (move_uploaded_file($file['tmp_name'], UPLOAD_DIR . $newFilename)) {
+            $newFilename = processImageUpload($file['tmp_name'], $ext, UPLOAD_DIR, 'proj_cover_', $convertToWebp);
+            if ($newFilename) {
                 if ($coverFilename) @unlink(UPLOAD_DIR . $coverFilename);
                 $coverFilename = $newFilename;
             } else {
-                $error = "Failed to upload cover image.";
+                $error = "Failed to upload or convert cover image.";
             }
         }
     }
@@ -502,6 +544,12 @@ if (isset($_GET['edit_project'])) {
             <h2>Upload Photos by Location</h2>
             <div class="card-content" style="display: none;">
                 <p style="color: #94a3b8; margin-bottom: 20px;">Drag and drop photo files directly onto a location below to upload them.</p>
+                <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #f8fafc;">
+                        <input type="checkbox" id="global_convert_webp" value="1" checked style="width: auto; margin-right: 15px; transform: scale(1.2);">
+                        Compress dropped photos to WebP format (Recommended)
+                    </label>
+                </div>
                 <div class="locations-grid">
                     <?php
                     if (!isset($pdo)) { require_once 'config.php'; }
@@ -539,6 +587,12 @@ if (isset($_GET['edit_project'])) {
                     <strong>Server Limits:</strong> Max Single Photo: <?php echo ini_get('upload_max_filesize'); ?> | Max Total Batch: <?php echo ini_get('post_max_size'); ?> | Max Photos per Batch: <?php echo ini_get('max_file_uploads'); ?>
                 </p>
                 <form method="POST" action="admin.php" enctype="multipart/form-data">
+                    <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #f8fafc;">
+                            <input type="checkbox" name="convert_webp" value="1" checked style="width: auto; margin-right: 15px; transform: scale(1.2);">
+                            Compress these photos to WebP format (Recommended)
+                        </label>
+                    </div>
                     <div class="form-group">
                         <label for="location_id">Select Location (Optional)</label>
                         <select name="location_id" id="location_id">
@@ -576,6 +630,12 @@ if (isset($_GET['edit_project'])) {
                     <?php if ($edit_project_data): ?>
                         <input type="hidden" name="update_project_id" value="<?php echo $edit_project_data['id']; ?>">
                     <?php endif; ?>
+                    <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #f8fafc;">
+                            <input type="checkbox" name="convert_webp_proj" value="1" checked style="width: auto; margin-right: 15px; transform: scale(1.2);">
+                            Compress cover image to WebP format (Recommended)
+                        </label>
+                    </div>
                     <div class="form-group">
                         <label for="project_title">Project Title</label>
                         <input type="text" name="project_title" id="project_title" required value="<?php echo $edit_project_data ? h($edit_project_data['title']) : ''; ?>">
@@ -622,11 +682,26 @@ if (isset($_GET['edit_project'])) {
                                 <th style="padding: 10px;">ID</th>
                                 <th style="padding: 10px;">Filename</th>
                                 <th style="padding: 10px;">Title</th>
+                                <th style="padding: 10px;">Size</th>
                                 <th style="padding: 10px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach($all_photos as $photoItem): ?>
+                            <?php 
+                                $filepath = UPLOAD_DIR . $photoItem['filename'];
+                                $sizeStr = 'N/A';
+                                if (file_exists($filepath)) {
+                                    $bytes = filesize($filepath);
+                                    if ($bytes >= 1048576) {
+                                        $sizeStr = "<span style='color: " . ($bytes > 3145728 ? '#ef4444' : '#f59e0b') . "'>" . number_format($bytes / 1048576, 2) . " MB</span>";
+                                    } elseif ($bytes >= 1024) {
+                                        $sizeStr = "<span style='color: #22c55e'>" . number_format($bytes / 1024, 0) . " KB</span>";
+                                    } else {
+                                        $sizeStr = $bytes . ' B';
+                                    }
+                                }
+                            ?>
                             <tr style="border-bottom: 1px solid #334155;">
                                 <td style="padding: 10px;">
                                     <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
@@ -634,6 +709,7 @@ if (isset($_GET['edit_project'])) {
                                 <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['id']; ?></td>
                                 <td style="padding: 10px; font-family: monospace; color: #cbd5e1;"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
                                 <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
+                                <td style="padding: 10px; font-family: monospace; font-size: 0.9rem;"><?php echo $sizeStr; ?></td>
                                 <td style="padding: 10px;">
                                     <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.');">
                                         <input type="hidden" name="delete_photo_id" value="<?php echo $photoItem['id']; ?>">
@@ -725,6 +801,8 @@ if (isset($_GET['edit_project'])) {
             formData.append('photo', file);
             formData.append('location_id', locationId);
             formData.append('ajax_upload_location', '1');
+            const convertWebp = document.getElementById('global_convert_webp') && document.getElementById('global_convert_webp').checked ? '1' : '0';
+            formData.append('convert_webp', convertWebp);
 
             let xhr = new XMLHttpRequest();
             xhr.open('POST', url, true);
