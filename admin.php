@@ -328,6 +328,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['convert_photo_webp']))
     }
 }
 
+// Handle Individual Photo Rotation
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rotate_photo'])) {
+    $id = $_POST['rotate_photo_id'];
+    
+    $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
+    $stmt->execute([$id]);
+    $photoToRotate = $stmt->fetch();
+    
+    if ($photoToRotate && $photoToRotate['filename']) {
+        $filepath = UPLOAD_DIR . $photoToRotate['filename'];
+        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+        
+        if (file_exists($filepath) && in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+            $image = null;
+            if ($ext === 'jpg' || $ext === 'jpeg') {
+                $image = @imagecreatefromjpeg($filepath);
+            } elseif ($ext === 'png') {
+                $image = @imagecreatefrompng($filepath);
+            } elseif ($ext === 'webp') {
+                $image = @imagecreatefromwebp($filepath);
+            }
+            
+            if ($image !== null) {
+                if ($ext === 'png') {
+                    imagepalettetotruecolor($image);
+                    imagealphablending($image, true);
+                    imagesavealpha($image, true);
+                }
+                
+                // Rotate 90 degrees clockwise (-90 in GD)
+                $rotated = imagerotate($image, -90, 0);
+                
+                if ($rotated !== false) {
+                    $success = false;
+                    if ($ext === 'jpg' || $ext === 'jpeg') {
+                        $success = imagejpeg($rotated, $filepath, 100);
+                    } elseif ($ext === 'png') {
+                        imagesavealpha($rotated, true);
+                        $success = imagepng($rotated, $filepath);
+                    } elseif ($ext === 'webp') {
+                        $success = imagewebp($rotated, $filepath, 80);
+                    }
+                    
+                    if ($success) {
+                        $message = "Photo rotated successfully!";
+                    } else {
+                        $error = "Failed to save rotated image.";
+                    }
+                    imagedestroy($rotated);
+                } else {
+                    $error = "Failed to rotate image memory.";
+                }
+                imagedestroy($image);
+            } else {
+                $error = "Failed to open original image for rotation.";
+            }
+        } else {
+            $error = "File doesn't exist or is unsupported for rotation.";
+        }
+    } else {
+        $error = "Failed to find photo to rotate.";
+    }
+}
+
 // Handle Project Creation
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_project'])) {
     $title = trim($_POST['project_title']);
@@ -771,6 +835,13 @@ if (isset($_GET['edit_project'])) {
                                     <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;">
                                         <input type="hidden" name="convert_photo_id" value="<?php echo $photoItem['id']; ?>">
                                         <button type="submit" name="convert_photo_webp" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Convert to WebP</button>
+                                    </form>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (in_array(strtolower(pathinfo($photoItem['filename'], PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'])): ?>
+                                    <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;">
+                                        <input type="hidden" name="rotate_photo_id" value="<?php echo $photoItem['id']; ?>">
+                                        <button type="submit" name="rotate_photo" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Rotate 90&deg;</button>
                                     </form>
                                     <?php endif; ?>
                                     
