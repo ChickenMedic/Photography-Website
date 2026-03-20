@@ -289,8 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Render in clean, uncropped masonry layout to respect all native photography aspect ratios
-            galleryContainer.className = 'gallery-container gallery-layout-1';
+            // Apply Random Layout (Skip 3 - Horizontal Scroll)
+            const allowedLayouts = [1, 2, 4, 5, 6, 7, 8];
+            const randomLayoutNum = allowedLayouts[Math.floor(Math.random() * allowedLayouts.length)];
+            galleryContainer.className = 'gallery-container gallery-layout-' + randomLayoutNum;
 
             galleryModal.classList.add('active');
             document.body.style.overflow = 'hidden';
