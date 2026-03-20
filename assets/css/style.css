@@ -766,9 +766,9 @@ img {
 
 .photo-item img {
     width: 100%;
-    height: auto;
-    object-fit: contain;
-    background-color: transparent;
+    height: 100%;
+    object-fit: cover;
+    background-color: rgba(10, 10, 10, 0.4);
     display: block;
     transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
@@ -884,6 +884,11 @@ img {
     min-width: 300px;
     height: 60vh;
     scroll-snap-align: center;
+}
+
+.gallery-layout-3 .photo-item img {
+    object-fit: contain;
+    background-color: transparent;
 }
 
 /* Layout 4: CSS Grid Mosaic */
@@ -1045,6 +1050,12 @@ img {
     width: 90vw;
     height: 80vh;
     border-radius: 20px;
+    background: transparent;
+}
+
+.gallery-layout-8 .photo-item img {
+    object-fit: contain;
+    background-color: transparent;
 }
 
 .gallery-layout-8 .overlay-content h3 {
