@@ -155,6 +155,7 @@ $initialAuthor = isset($quoteParts[1]) ? $quoteParts[1] : '';
 else: ?>
             <div class="masonry-grid container">
                 <!-- Location Cards -->
+                <?php shuffle($locations); ?>
                 <?php foreach ($locations as $loc): ?>
                     <?php
                     // Skip inactive locations
