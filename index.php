@@ -155,14 +155,12 @@ $initialAuthor = isset($quoteParts[1]) ? $quoteParts[1] : '';
 else: ?>
             <div class="masonry-grid container">
                 <!-- Location Cards -->
-                <?php
-                // Prepare location data
-                $renderedCards = [];
-                $locationStats = [];
-
-                foreach ($locations as $loc) {
+                <?php foreach ($locations as $loc): ?>
+                    <?php
+                    // Skip inactive locations
                     if (isset($loc['is_active']) && $loc['is_active'] == 0) continue;
-                    
+
+                    // Find all photos for this location
                     $locationPhotos = [];
                     $validCoverPhotos = [];
                     
@@ -189,65 +187,32 @@ else: ?>
                     }
                     
                     $photoCount = count($locationPhotos);
+
+                    // Skip if no photos
                     if ($photoCount === 0) continue;
-                    
+                        
+                    // Fallback to all photos if everything was filtered out
                     if (count($validCoverPhotos) == 0) {
                         $validCoverPhotos = $locationPhotos;
                     }
                     
-                    $locationStats[] = [
-                        'loc' => $loc,
-                        'count' => $photoCount,
-                        'covers' => $validCoverPhotos
-                    ];
-                }
-
-                // Sort locations by photo count descending to find top 4
-                usort($locationStats, function($a, $b) {
-                    return $b['count'] <=> $a['count'];
-                });
-
-                for ($i = 0; $i < count($locationStats); $i++) {
-                    $stat = $locationStats[$i];
-                    $numToPick = 1;
-                    // Top 4 get doubled if they have at least 2 valid distinct covers
-                    if ($i < 4 && count($stat['covers']) >= 2) {
-                        $numToPick = 2;
-                    }
-                    
-                    $coverKeys = array_rand($stat['covers'], $numToPick);
-                    if (!is_array($coverKeys)) {
-                        $coverKeys = [$coverKeys];
-                    }
-                    
-                    foreach ($coverKeys as $key) {
-                        $renderedCards[] = [
-                            'loc' => $stat['loc'],
-                            'count' => $stat['count'],
-                            'cover' => $stat['covers'][$key]
-                        ];
-                    }
-                }
-
-                // Randomize the final order of cards so doubled ones aren't next to each other
-                shuffle($renderedCards);
-                
-                foreach ($renderedCards as $card):
-                ?>
+                    // Pick 1 random cover
+                    $cover = $validCoverPhotos[array_rand($validCoverPhotos)];
+                    ?>
                     <div class="masonry-item location-card fade-in" 
-                         data-location-id="<?php echo $card['loc']['id']; ?>" 
-                         data-name="<?php echo h($card['loc']['name']); ?>">
+                         data-location-id="<?php echo $loc['id']; ?>" 
+                         data-name="<?php echo h($loc['name']); ?>">
                         
-                        <?php if ($card['cover']): ?>
-                            <img src="uploads/<?php echo h($card['cover']); ?>" alt="<?php echo h($card['loc']['name']); ?>" loading="lazy">
+                        <?php if ($cover): ?>
+                            <img src="uploads/<?php echo h($cover); ?>" alt="<?php echo h($loc['name']); ?>" loading="lazy">
                         <?php else: ?>
                             <div style="width: 100%; height: 300px; background: #1e293b; display:flex; align-items:center; justify-content:center; color: #64748b;">No Photos</div>
                         <?php endif; ?>
                         
                         <!-- Custom persistent title for location card -->
                         <div style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); position: absolute; bottom: 0; left: 0; right: 0; padding: 25px 25px 15px 25px; z-index: 2; pointer-events: none;">
-                            <h3 style="color: #fff; font-size: 1.5rem; margin: 0; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.8));"><?php echo h($card['loc']['name']); ?></h3>
-                            <span style="color: #a3a3a3; font-size: 0.85rem; padding-top: 5px; display: block; filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.8));"><?php echo $card['count']; ?> Photo<?php echo $card['count'] !== 1 ? 's' : ''; ?></span>
+                            <h3 style="color: #fff; font-size: 1.5rem; margin: 0; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.8));"><?php echo h($loc['name']); ?></h3>
+                            <span style="color: #a3a3a3; font-size: 0.85rem; padding-top: 5px; display: block; filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.8));"><?php echo $photoCount; ?> Photo<?php echo $photoCount !== 1 ? 's' : ''; ?></span>
                         </div>
                         
                         <div class="overlay">
