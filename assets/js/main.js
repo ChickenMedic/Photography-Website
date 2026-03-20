@@ -254,7 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const locId = card.getAttribute('data-location-id');
             const locName = card.getAttribute('data-name');
-            const photos = allPhotosDB.filter(p => p.location_id == locId);
+            let photos = allPhotosDB.filter(p => p.location_id == locId);
+            
+            // Randomize the photos order for each gallery view
+            photos = photos.sort(() => 0.5 - Math.random());
 
             galleryTitle.textContent = locName;
             galleryContainer.innerHTML = ''; // Clear previous
@@ -286,10 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Apply Random Layout (Skip 3 - Horizontal Scroll)
-            const allowedLayouts = [1, 2, 4, 5, 6, 7, 8];
-            const randomLayoutNum = allowedLayouts[Math.floor(Math.random() * allowedLayouts.length)];
-            galleryContainer.className = 'gallery-container gallery-layout-' + randomLayoutNum;
+            // Render in clean, uncropped masonry layout to respect all native photography aspect ratios
+            galleryContainer.className = 'gallery-container gallery-layout-1';
 
             galleryModal.classList.add('active');
             document.body.style.overflow = 'hidden';

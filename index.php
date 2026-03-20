@@ -163,9 +163,28 @@ else: ?>
 
         // Find all photos for this location
         $locationPhotos = [];
+        $validCoverPhotos = [];
+        
         foreach ($photos as $p) {
             if ($p['location_id'] == $loc['id']) {
-                $locationPhotos[] = $p['filename'];
+                $file = $p['filename'];
+                $locationPhotos[] = $file;
+                
+                // Fast dimensions check to avoid panoramas for the card cover
+                $path = UPLOAD_DIR . $file;
+                if (file_exists($path)) {
+                    $sz = @getimagesize($path);
+                    if ($sz) {
+                        $w = $sz[0];
+                        $h = $sz[1];
+                        // Reject super wide images (width > 1.35x height)
+                        if ($w <= $h * 1.35) {
+                            $validCoverPhotos[] = $file;
+                        }
+                    } else {
+                        $validCoverPhotos[] = $file; // Fallback
+                    }
+                }
             }
         }
         
@@ -175,8 +194,20 @@ else: ?>
         if ($photoCount === 0)
             continue;
             
-        // Randomize the cover image
-        $cover = $locationPhotos[array_rand($locationPhotos)];
+        // Fallback to all photos if everything was filtered out
+        if (count($validCoverPhotos) == 0) {
+            $validCoverPhotos = $locationPhotos;
+        }
+        
+        // Pick up to 2 unique covers
+        $numToPick = min(2, count($validCoverPhotos));
+        $coverKeys = array_rand($validCoverPhotos, $numToPick);
+        if (!is_array($coverKeys)) {
+            $coverKeys = [$coverKeys];
+        }
+        
+        foreach ($coverKeys as $key):
+            $cover = $validCoverPhotos[$key];
 ?>
                     <div class="masonry-item location-card fade-in" 
                          data-location-id="<?php echo $loc['id']; ?>" 
@@ -184,11 +215,9 @@ else: ?>
                         
                         <?php if ($cover): ?>
                             <img src="uploads/<?php echo h($cover); ?>" alt="<?php echo h($loc['name']); ?>" loading="lazy">
-                        <?php
-        else: ?>
+                        <?php else: ?>
                             <div style="width: 100%; height: 300px; background: #1e293b; display:flex; align-items:center; justify-content:center; color: #64748b;">No Photos</div>
-                        <?php
-        endif; ?>
+                        <?php endif; ?>
                         
                         <!-- Custom persistent title for location card -->
                         <div style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); position: absolute; bottom: 0; left: 0; right: 0; padding: 25px 25px 15px 25px; z-index: 2; pointer-events: none;">
@@ -202,8 +231,8 @@ else: ?>
                             </div>
                         </div>
                     </div>
-                <?php
-    endforeach; ?>
+                <?php endforeach; ?>
+                <?php endforeach; ?>
 
                 <?php
     // Display photos not assigned to any location as individual items (optional, but good for UX)
