@@ -106,6 +106,18 @@ function processImageUpload($tmpPath, $originalExt, $destinationFolder, $prefix,
     }
 
     if ($image !== null) {
+        // Downscale to a web-friendly size — full-resolution files are only needed for print
+        $maxLongEdge = 2560;
+        $width = imagesx($image);
+        $height = imagesy($image);
+        if (max($width, $height) > $maxLongEdge) {
+            $scale = $maxLongEdge / max($width, $height);
+            $resized = imagescale($image, (int)round($width * $scale), (int)round($height * $scale), IMG_BICUBIC);
+            if ($resized !== false) {
+                imagedestroy($image);
+                $image = $resized;
+            }
+        }
         $success = imagewebp($image, $destination, 80); // 80% is the optimal WebP quality
         imagedestroy($image);
         return $success ? $filename : false;
@@ -671,6 +683,9 @@ if (isset($_GET['edit_project'])) {
         <?php endif; ?>
         <?php if ($error): ?>
             <div class="alert alert-error"><?php echo h($error); ?></div>
+        <?php endif; ?>
+        <?php if (!function_exists('imagewebp')): ?>
+            <div class="alert alert-error">Warning: the PHP GD extension is not enabled on this server, so uploaded photos are being stored at full size with NO compression or resizing. Enable the "gd" extension in php.ini (and restart the web server) to fix this.</div>
         <?php endif; ?>
 
         <div class="card">
