@@ -288,6 +288,101 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bulk_delete_photos']) 
     }
 }
 
+// Handle Bulk Photo Compression (resize to 2560px + convert to WebP, then remove the old file)
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bulk_compress_photos']) && !empty($_POST['bulk_delete_ids'])) {
+    if (!function_exists('imagewebp')) {
+        $error = "Cannot compress: the PHP GD extension is not enabled on this server.";
+    } else {
+        @set_time_limit(600);
+        $ids = array_filter($_POST['bulk_delete_ids'], 'is_numeric');
+        $converted = 0; $skipped = 0; $failed = [];
+        $bytesBefore = 0; $bytesAfter = 0;
+
+        foreach ($ids as $id) {
+            $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
+            $stmt->execute([$id]);
+            $photo = $stmt->fetch();
+            if (!$photo || !$photo['filename'] || !file_exists(UPLOAD_DIR . $photo['filename'])) {
+                $failed[] = "#$id (file missing)";
+                continue;
+            }
+
+            $filepath = UPLOAD_DIR . $photo['filename'];
+            $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+            $info = @getimagesize($filepath);
+            if (!$info) {
+                $failed[] = $photo['filename'] . " (unreadable)";
+                continue;
+            }
+
+            $maxLongEdge = 2560;
+            $needsResize = max($info[0], $info[1]) > $maxLongEdge;
+            if ($ext === 'webp' && !$needsResize) {
+                $skipped++;
+                continue;
+            }
+
+            $image = null;
+            if ($ext === 'jpg' || $ext === 'jpeg') {
+                $image = @imagecreatefromjpeg($filepath);
+            } elseif ($ext === 'png') {
+                $image = @imagecreatefrompng($filepath);
+                if ($image) {
+                    imagepalettetotruecolor($image);
+                    imagealphablending($image, true);
+                    imagesavealpha($image, true);
+                }
+            } elseif ($ext === 'webp') {
+                $image = @imagecreatefromwebp($filepath);
+            }
+            if (!$image) {
+                $failed[] = $photo['filename'] . " (could not open)";
+                continue;
+            }
+
+            if ($needsResize) {
+                $scale = $maxLongEdge / max($info[0], $info[1]);
+                $resized = imagescale($image, (int)round($info[0] * $scale), (int)round($info[1] * $scale), IMG_BICUBIC);
+                if ($resized !== false) {
+                    imagedestroy($image);
+                    $image = $resized;
+                }
+            }
+
+            $newFilename = uniqid('photo_') . '.webp';
+            $newFilepath = UPLOAD_DIR . $newFilename;
+            $oldSize = filesize($filepath);
+            if (imagewebp($image, $newFilepath, 80)) {
+                $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
+                if ($upStmt->execute([$newFilename, $id])) {
+                    @unlink($filepath); // Old large file is only removed once the new one is saved and in the DB
+                    $converted++;
+                    $bytesBefore += $oldSize;
+                    $bytesAfter += filesize($newFilepath);
+                } else {
+                    @unlink($newFilepath);
+                    $failed[] = $photo['filename'] . " (database error)";
+                }
+            } else {
+                $failed[] = $photo['filename'] . " (encode failed)";
+            }
+            imagedestroy($image);
+        }
+
+        $message = "Compressed $converted photo(s)";
+        if ($bytesBefore > 0) {
+            $message .= sprintf(": %.1f MB down to %.1f MB", $bytesBefore / 1048576, $bytesAfter / 1048576);
+        }
+        if ($skipped > 0) {
+            $message .= ". Skipped $skipped already optimized";
+        }
+        $message .= ".";
+        if (!empty($failed)) {
+            $error = "Could not compress: " . implode(', ', $failed);
+        }
+    }
+}
+
 // Handle Photo Deletion
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_photo'])) {
     $id = $_POST['delete_photo_id'];
@@ -836,7 +931,7 @@ if (isset($_GET['edit_project'])) {
             <div class="card-content" style="display: none;">
                 <p style="color: #94a3b8; margin-bottom: 20px;">Review and delete uploaded photos. Deleting a photo will permanently remove it from the server and the galleries.</p>
                 <div style="overflow-x:auto;">
-                    <form method="POST" action="admin.php" id="bulkDeleteForm" onsubmit="return confirm('Are you completely sure you want to permanently delete all selected photos? This cannot be undone.');">
+                    <form method="POST" action="admin.php" id="bulkDeleteForm">
                     <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr style="border-bottom: 1px solid #475569;">
@@ -903,7 +998,8 @@ if (isset($_GET['edit_project'])) {
                         </tbody>
                     </table>
                     <div style="margin-top: 20px;">
-                        <button type="submit" name="bulk_delete_photos" style="background: #ef4444;">Delete Selected Photos</button>
+                        <button type="submit" name="bulk_compress_photos" style="background: #3b82f6; margin-right: 10px;" onclick="return confirm('Compress the selected photos? Each original will be replaced by a resized WebP copy (the large original file is deleted).');">Compress Selected</button>
+                        <button type="submit" name="bulk_delete_photos" style="background: #ef4444;" onclick="return confirm('Are you completely sure you want to permanently delete all selected photos? This cannot be undone.');">Delete Selected Photos</button>
                     </div>
                     </form>
                 </div>
