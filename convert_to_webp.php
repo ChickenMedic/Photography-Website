@@ -12,83 +12,51 @@ $photosConverted = 0;
 $projectsConverted = 0;
 
 if (isset($_POST['run_conversion'])) {
-    
+    ensureMemoryLimitMb(512);
+
     // 1. Process standard photos
     $stmt = $pdo->query("SELECT id, filename FROM photos");
     $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     foreach ($photos as $photo) {
+        @set_time_limit(120); // reset the clock per image so big batches never die mid-run
         $filepath = UPLOAD_DIR . $photo['filename'];
         $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        
+
         // Skip files that don't exist or are already webp/gif
         if (!file_exists($filepath) || !in_array($ext, ['jpg', 'jpeg', 'png'])) continue;
-        
-        $newFilename = uniqid('photo_') . '.webp';
-        $newFilepath = UPLOAD_DIR . $newFilename;
-        $image = null;
-        
-        if ($ext === 'jpg' || $ext === 'jpeg') {
-            $image = @imagecreatefromjpeg($filepath);
-        } elseif ($ext === 'png') {
-            $image = @imagecreatefrompng($filepath);
-            if ($image) {
-                imagepalettetotruecolor($image);
-                imagealphablending($image, true);
-                imagesavealpha($image, true);
-            }
-        }
-        
-        if ($image !== null) {
-            if (imagewebp($image, $newFilepath, 80)) {
-                // Safely update DB 
-                $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
-                $upStmt->execute([$newFilename, $photo['id']]);
-                
-                // Nuke old heavy image
-                @unlink($filepath);
-                $photosConverted++;
-            }
-            imagedestroy($image);
+
+        $newFilename = reencodeAsWebp($filepath, 'photo_');
+        if ($newFilename) {
+            $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
+            $upStmt->execute([$newFilename, $photo['id']]);
+
+            // Nuke old heavy image
+            @unlink($filepath);
+            $photosConverted++;
         }
     }
-    
+
     // 2. Process Project Cover Images
     $projStmt = $pdo->query("SELECT id, cover_image FROM projects WHERE cover_image IS NOT NULL");
     $projects = $projStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     foreach ($projects as $proj) {
+        @set_time_limit(120);
         $filepath = UPLOAD_DIR . $proj['cover_image'];
         $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        
+
         if (!file_exists($filepath) || !in_array($ext, ['jpg', 'jpeg', 'png'])) continue;
-        
-        $newFilename = uniqid('proj_cover_') . '.webp';
-        $newFilepath = UPLOAD_DIR . $newFilename;
-        $image = null;
-        
-        if ($ext === 'jpg' || $ext === 'jpeg') {
-            $image = @imagecreatefromjpeg($filepath);
-        } elseif ($ext === 'png') {
-            $image = @imagecreatefrompng($filepath);
-            if ($image) {
-                imagepalettetotruecolor($image);
-                imagealphablending($image, true);
-                imagesavealpha($image, true);
-            }
-        }
-        
-        if ($image !== null) {
-            if (imagewebp($image, $newFilepath, 80)) {
-                $upStmt = $pdo->prepare("UPDATE projects SET cover_image = ? WHERE id = ?");
-                $upStmt->execute([$newFilename, $proj['id']]);
-                @unlink($filepath);
-                $projectsConverted++;
-            }
-            imagedestroy($image);
+
+        $newFilename = reencodeAsWebp($filepath, 'proj_cover_');
+        if ($newFilename) {
+            $upStmt = $pdo->prepare("UPDATE projects SET cover_image = ? WHERE id = ?");
+            $upStmt->execute([$newFilename, $proj['id']]);
+            @unlink($filepath);
+            $projectsConverted++;
         }
     }
-    
+
     $message = "Optimization Complete! Successfully shrunk {$photosConverted} gallery photos and {$projectsConverted} project posters into WebP format.";
 }
 ?>

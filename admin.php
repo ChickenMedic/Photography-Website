@@ -96,6 +96,7 @@ function processImageUpload($tmpPath, $originalExt, $destinationFolder, $prefix,
     $image = null;
     if ($info['mime'] == 'image/jpeg') {
         $image = @imagecreatefromjpeg($tmpPath);
+        if ($image) $image = applyExifOrientation($image, $tmpPath);
     } elseif ($info['mime'] == 'image/png') {
         $image = @imagecreatefrompng($tmpPath);
         if ($image) {
@@ -106,18 +107,7 @@ function processImageUpload($tmpPath, $originalExt, $destinationFolder, $prefix,
     }
 
     if ($image !== null) {
-        // Downscale to a web-friendly size — full-resolution files are only needed for print
-        $maxLongEdge = 2560;
-        $width = imagesx($image);
-        $height = imagesy($image);
-        if (max($width, $height) > $maxLongEdge) {
-            $scale = $maxLongEdge / max($width, $height);
-            $resized = imagescale($image, (int)round($width * $scale), (int)round($height * $scale), IMG_BICUBIC);
-            if ($resized !== false) {
-                imagedestroy($image);
-                $image = $resized;
-            }
-        }
+        $image = resizeToMaxEdge($image);
         $success = imagewebp($image, $destination, 80); // 80% is the optimal WebP quality
         imagedestroy($image);
         return $success ? $filename : false;
@@ -288,99 +278,60 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bulk_delete_photos']) 
     }
 }
 
-// Handle Bulk Photo Compression (resize to 2560px + convert to WebP, then remove the old file)
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bulk_compress_photos']) && !empty($_POST['bulk_delete_ids'])) {
+// AJAX: compress ONE photo to a resized WebP (called in a loop by the Manage Photos
+// buttons so a big batch can never hit the PHP execution time limit)
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax_compress_photo'])) {
+    header('Content-Type: application/json');
+    $response = ['status' => 'error', 'message' => 'Unknown error'];
+
     if (!function_exists('imagewebp')) {
-        $error = "Cannot compress: the PHP GD extension is not enabled on this server.";
+        $response['message'] = 'The PHP GD extension is not enabled on this server.';
     } else {
-        @set_time_limit(600);
-        $ids = array_filter($_POST['bulk_delete_ids'], 'is_numeric');
-        $converted = 0; $skipped = 0; $failed = [];
-        $bytesBefore = 0; $bytesAfter = 0;
+        @set_time_limit(120);
+        $id = (int)($_POST['photo_id'] ?? 0);
+        $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
+        $stmt->execute([$id]);
+        $photo = $stmt->fetch();
 
-        foreach ($ids as $id) {
-            $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
-            $stmt->execute([$id]);
-            $photo = $stmt->fetch();
-            if (!$photo || !$photo['filename'] || !file_exists(UPLOAD_DIR . $photo['filename'])) {
-                $failed[] = "#$id (file missing)";
-                continue;
-            }
-
+        if (!$photo || !$photo['filename'] || !file_exists(UPLOAD_DIR . $photo['filename'])) {
+            $response['message'] = "Photo #$id: file missing";
+        } else {
             $filepath = UPLOAD_DIR . $photo['filename'];
             $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
             $info = @getimagesize($filepath);
+
             if (!$info) {
-                $failed[] = $photo['filename'] . " (unreadable)";
-                continue;
-            }
-
-            $maxLongEdge = 2560;
-            $needsResize = max($info[0], $info[1]) > $maxLongEdge;
-            if ($ext === 'webp' && !$needsResize) {
-                $skipped++;
-                continue;
-            }
-
-            $image = null;
-            if ($ext === 'jpg' || $ext === 'jpeg') {
-                $image = @imagecreatefromjpeg($filepath);
-            } elseif ($ext === 'png') {
-                $image = @imagecreatefrompng($filepath);
-                if ($image) {
-                    imagepalettetotruecolor($image);
-                    imagealphablending($image, true);
-                    imagesavealpha($image, true);
-                }
-            } elseif ($ext === 'webp') {
-                $image = @imagecreatefromwebp($filepath);
-            }
-            if (!$image) {
-                $failed[] = $photo['filename'] . " (could not open)";
-                continue;
-            }
-
-            if ($needsResize) {
-                $scale = $maxLongEdge / max($info[0], $info[1]);
-                $resized = imagescale($image, (int)round($info[0] * $scale), (int)round($info[1] * $scale), IMG_BICUBIC);
-                if ($resized !== false) {
-                    imagedestroy($image);
-                    $image = $resized;
-                }
-            }
-
-            $newFilename = uniqid('photo_') . '.webp';
-            $newFilepath = UPLOAD_DIR . $newFilename;
-            $oldSize = filesize($filepath);
-            if (imagewebp($image, $newFilepath, 80)) {
-                $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
-                if ($upStmt->execute([$newFilename, $id])) {
-                    @unlink($filepath); // Old large file is only removed once the new one is saved and in the DB
-                    $converted++;
-                    $bytesBefore += $oldSize;
-                    $bytesAfter += filesize($newFilepath);
-                } else {
-                    @unlink($newFilepath);
-                    $failed[] = $photo['filename'] . " (database error)";
-                }
+                $response['message'] = $photo['filename'] . ' is unreadable';
+            } elseif (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                $response = ['status' => 'skipped', 'message' => 'Unsupported format: ' . $ext];
+            } elseif ($ext === 'webp' && max($info[0], $info[1]) <= 2560) {
+                $response = ['status' => 'skipped', 'message' => 'Already optimized'];
             } else {
-                $failed[] = $photo['filename'] . " (encode failed)";
+                $oldBytes = filesize($filepath);
+                $newFilename = reencodeAsWebp($filepath, 'photo_');
+                if ($newFilename) {
+                    $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
+                    if ($upStmt->execute([$newFilename, $id])) {
+                        @unlink($filepath); // Old large file is only removed once the new one is saved and in the DB
+                        $response = [
+                            'status' => 'success',
+                            'message' => 'Compressed',
+                            'newFilename' => $newFilename,
+                            'oldBytes' => $oldBytes,
+                            'newBytes' => filesize(UPLOAD_DIR . $newFilename),
+                        ];
+                    } else {
+                        @unlink(UPLOAD_DIR . $newFilename);
+                        $response['message'] = 'Database update failed';
+                    }
+                } else {
+                    $response['message'] = 'Could not convert ' . $photo['filename'];
+                }
             }
-            imagedestroy($image);
-        }
-
-        $message = "Compressed $converted photo(s)";
-        if ($bytesBefore > 0) {
-            $message .= sprintf(": %.1f MB down to %.1f MB", $bytesBefore / 1048576, $bytesAfter / 1048576);
-        }
-        if ($skipped > 0) {
-            $message .= ". Skipped $skipped already optimized";
-        }
-        $message .= ".";
-        if (!empty($failed)) {
-            $error = "Could not compress: " . implode(', ', $failed);
         }
     }
+    echo json_encode($response);
+    exit;
 }
 
 // Handle Photo Deletion
@@ -405,112 +356,61 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_photo'])) {
     }
 }
 
-// Handle Individual Photo WebP Conversion
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['convert_photo_webp'])) {
-    $id = $_POST['convert_photo_id'];
-    
-    $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
-    $stmt->execute([$id]);
-    $photoToConvert = $stmt->fetch();
-    
-    if ($photoToConvert && $photoToConvert['filename']) {
-        $filepath = UPLOAD_DIR . $photoToConvert['filename'];
-        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        
-        if (file_exists($filepath) && in_array($ext, ['jpg', 'jpeg', 'png'])) {
-            $newFilename = uniqid('photo_') . '.webp';
-            $newFilepath = UPLOAD_DIR . $newFilename;
-            $image = null;
-            
-            if ($ext === 'jpg' || $ext === 'jpeg') {
-                $image = @imagecreatefromjpeg($filepath);
-            } elseif ($ext === 'png') {
-                $image = @imagecreatefrompng($filepath);
-                if ($image) {
-                    imagepalettetotruecolor($image);
-                    imagealphablending($image, true);
-                    imagesavealpha($image, true);
-                }
-            }
-            
-            if ($image !== null) {
-                if (imagewebp($image, $newFilepath, 80)) {
-                    $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
-                    if ($upStmt->execute([$newFilename, $id])) {
-                        @unlink($filepath);
-                        $message = "Photo perfectly compressed to WebP format!";
-                    } else {
-                        $error = "Failed to update database with WebP photo.";
-                        @unlink($newFilepath); // Clean up if DB fails
-                    }
-                } else {
-                    $error = "Failed to encode WebP image.";
-                }
-                imagedestroy($image);
-            } else {
-                $error = "Failed to open original image for conversion.";
-            }
-        } else {
-            $error = "File doesn't exist or is already optimized.";
-        }
-    } else {
-        $error = "Failed to find photo to convert.";
-    }
-}
-
 // Handle Individual Photo Rotation
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rotate_photo'])) {
-    $id = $_POST['rotate_photo_id'];
-    
+    @set_time_limit(120);
+    ensureMemoryLimitMb(512);
+    $id = (int)$_POST['rotate_photo_id'];
+    $newFilename = null;
+
     $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
     $stmt->execute([$id]);
     $photoToRotate = $stmt->fetch();
-    
+
     if ($photoToRotate && $photoToRotate['filename']) {
         $filepath = UPLOAD_DIR . $photoToRotate['filename'];
         $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        
+
         if (file_exists($filepath) && in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-            $image = null;
-            if ($ext === 'jpg' || $ext === 'jpeg') {
-                $image = @imagecreatefromjpeg($filepath);
-            } elseif ($ext === 'png') {
-                $image = @imagecreatefrompng($filepath);
-            } elseif ($ext === 'webp') {
-                $image = @imagecreatefromwebp($filepath);
-            }
-            
+            $image = loadImageForEditing($filepath);
+
             if ($image !== null) {
-                if ($ext === 'png') {
-                    imagepalettetotruecolor($image);
-                    imagealphablending($image, true);
-                    imagesavealpha($image, true);
-                }
-                
                 // Rotate 90 degrees clockwise (-90 in GD)
                 $rotated = imagerotate($image, -90, 0);
-                
+                imagedestroy($image);
+
                 if ($rotated !== false) {
+                    // Save under a fresh name so no cached copy of the old orientation survives
+                    $newFilename = uniqid('photo_') . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+                    $newFilepath = UPLOAD_DIR . $newFilename;
                     $success = false;
                     if ($ext === 'jpg' || $ext === 'jpeg') {
-                        $success = imagejpeg($rotated, $filepath, 100);
+                        $success = imagejpeg($rotated, $newFilepath, 90);
                     } elseif ($ext === 'png') {
                         imagesavealpha($rotated, true);
-                        $success = imagepng($rotated, $filepath);
+                        $success = imagepng($rotated, $newFilepath);
                     } elseif ($ext === 'webp') {
-                        $success = imagewebp($rotated, $filepath, 80);
-                    }
-                    
-                    if ($success) {
-                        $message = "Photo rotated successfully!";
-                    } else {
-                        $error = "Failed to save rotated image.";
+                        $success = imagewebp($rotated, $newFilepath, 80);
                     }
                     imagedestroy($rotated);
+
+                    if ($success) {
+                        $upStmt = $pdo->prepare("UPDATE photos SET filename = ? WHERE id = ?");
+                        if ($upStmt->execute([$newFilename, $id])) {
+                            @unlink($filepath);
+                            $message = "Photo rotated successfully!";
+                        } else {
+                            @unlink($newFilepath);
+                            $newFilename = null;
+                            $error = "Failed to update database with rotated photo.";
+                        }
+                    } else {
+                        $newFilename = null;
+                        $error = "Failed to save rotated image.";
+                    }
                 } else {
                     $error = "Failed to rotate image memory.";
                 }
-                imagedestroy($image);
             } else {
                 $error = "Failed to open original image for rotation.";
             }
@@ -523,7 +423,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rotate_photo'])) {
 
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
         header('Content-Type: application/json');
-        echo json_encode(['status' => empty($error) ? 'success' : 'error', 'message' => empty($error) ? ($message ?? '') : $error]);
+        echo json_encode([
+            'status' => empty($error) ? 'success' : 'error',
+            'message' => empty($error) ? ($message ?? '') : $error,
+            'newFilename' => $newFilename,
+        ]);
         exit;
     }
 }
@@ -628,7 +532,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_project'])) {
 }
 
 $projects = $pdo->query("SELECT * FROM projects ORDER BY id DESC")->fetchAll();
-$all_photos = $pdo->query("SELECT * FROM photos ORDER BY id DESC")->fetchAll();
+$all_photos = $pdo->query("SELECT p.*, l.name AS location_name FROM photos p LEFT JOIN locations l ON p.location_id = l.id ORDER BY p.id DESC")->fetchAll();
 
 $edit_project_data = null;
 if (isset($_GET['edit_project'])) {
@@ -692,7 +596,8 @@ if (isset($_GET['edit_project'])) {
         .card { background: #1e293b; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #334155;}
         .form-group { margin-bottom: 16px; }
         label { display: block; margin-bottom: 8px; font-weight: 500; color: #94a3b8;}
-        input[type="text"], input[type="url"], textarea, input[type="file"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
+        input[type="text"], input[type="url"], input[type="date"], textarea, input[type="file"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
+        input[type="date"] { color-scheme: dark; }
         textarea { resize: vertical; min-height: 100px; }
         button { padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
         button:hover { background: #2563eb; }
@@ -930,6 +835,46 @@ if (isset($_GET['edit_project'])) {
             <h2>Manage Photos</h2>
             <div class="card-content" style="display: none;">
                 <p style="color: #94a3b8; margin-bottom: 20px;">Review and delete uploaded photos. Deleting a photo will permanently remove it from the server and the galleries.</p>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: flex-end;">
+                    <div style="flex: 1 1 160px;">
+                        <label for="photoFilterSearch" style="margin-bottom: 4px;">Search</label>
+                        <input type="text" id="photoFilterSearch" placeholder="Filename or title" oninput="filterPhotoRows()">
+                    </div>
+                    <div>
+                        <label for="photoFilterLocation" style="margin-bottom: 4px;">Location</label>
+                        <select id="photoFilterLocation" onchange="filterPhotoRows()" style="margin-bottom: 0; width: auto;">
+                            <option value="">All</option>
+                            <option value="__none">No location</option>
+                            <?php foreach ($locations as $loc): ?>
+                                <option value="<?php echo $loc['id']; ?>"><?php echo h($loc['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="photoFilterFormat" style="margin-bottom: 4px;">Format</label>
+                        <select id="photoFilterFormat" onchange="filterPhotoRows()" style="margin-bottom: 0; width: auto;">
+                            <option value="">All</option>
+                            <option value="jpg">JPG</option>
+                            <option value="png">PNG</option>
+                            <option value="webp">WebP</option>
+                            <option value="gif">GIF</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="photoFilterFrom" style="margin-bottom: 4px;">Uploaded from</label>
+                        <input type="date" id="photoFilterFrom" onchange="filterPhotoRows()">
+                    </div>
+                    <div>
+                        <label for="photoFilterTo" style="margin-bottom: 4px;">Uploaded to</label>
+                        <input type="date" id="photoFilterTo" onchange="filterPhotoRows()">
+                    </div>
+                    <div>
+                        <button type="button" onclick="clearPhotoFilters()" style="background: #475569;">Clear</button>
+                    </div>
+                    <span id="photoFilterCount" style="color: #94a3b8; padding-bottom: 10px;"></span>
+                </div>
+
                 <div style="overflow-x:auto;">
                     <form method="POST" action="admin.php" id="bulkDeleteForm">
                     <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -940,13 +885,15 @@ if (isset($_GET['edit_project'])) {
                                 <th style="padding: 10px;">ID</th>
                                 <th style="padding: 10px;">Filename</th>
                                 <th style="padding: 10px;">Title</th>
+                                <th style="padding: 10px;">Location</th>
                                 <th style="padding: 10px;">Size</th>
+                                <th style="padding: 10px;">Uploaded</th>
                                 <th style="padding: 10px;">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="photoRowsBody">
                             <?php foreach($all_photos as $photoItem): ?>
-                            <?php 
+                            <?php
                                 $filepath = UPLOAD_DIR . $photoItem['filename'];
                                 $sizeStr = 'N/A';
                                 if (file_exists($filepath)) {
@@ -959,47 +906,43 @@ if (isset($_GET['edit_project'])) {
                                         $sizeStr = $bytes . ' B';
                                     }
                                 }
+                                $rowExt = strtolower(pathinfo($photoItem['filename'], PATHINFO_EXTENSION));
+                                if ($rowExt === 'jpeg') $rowExt = 'jpg';
                             ?>
-                            <tr style="border-bottom: 1px solid #334155;">
+                            <tr style="border-bottom: 1px solid #334155;" class="photo-row"
+                                data-search="<?php echo h(strtolower($photoItem['filename'] . ' ' . ($photoItem['title'] ?? ''))); ?>"
+                                data-location="<?php echo $photoItem['location_id'] ? (int)$photoItem['location_id'] : '__none'; ?>"
+                                data-ext="<?php echo h($rowExt); ?>"
+                                data-date="<?php echo $photoItem['created_at'] ? h(substr($photoItem['created_at'], 0, 10)) : ''; ?>">
                                 <td style="padding: 10px;"><input type="checkbox" name="bulk_delete_ids[]" value="<?php echo $photoItem['id']; ?>" class="photo-checkbox"></td>
                                 <td style="padding: 10px;">
-                                    <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
+                                    <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" class="preview-img" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
                                 </td>
                                 <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['id']; ?></td>
-                                <td style="padding: 10px; font-family: monospace; color: #cbd5e1;"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
+                                <td style="padding: 10px; font-family: monospace; color: #cbd5e1;" class="filename-cell"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
                                 <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
-                                <td style="padding: 10px; font-family: monospace; font-size: 0.9rem;"><?php echo $sizeStr; ?></td>
-                                <td style="padding: 10px;">
-                                    <?php 
-                                        $ext = strtolower(pathinfo($photoItem['filename'], PATHINFO_EXTENSION));
-                                        if (in_array($ext, ['jpg', 'jpeg', 'png'])):
-                                    ?>
-                                    <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;">
-                                        <input type="hidden" name="convert_photo_id" value="<?php echo $photoItem['id']; ?>">
-                                        <button type="submit" name="convert_photo_webp" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Convert to WebP</button>
-                                    </form>
+                                <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['location_name'] ? h($photoItem['location_name']) : '—'; ?></td>
+                                <td style="padding: 10px; font-family: monospace; font-size: 0.9rem;" class="size-cell"><?php echo $sizeStr; ?></td>
+                                <td style="padding: 10px; color: #94a3b8; white-space: nowrap;"><?php echo $photoItem['created_at'] ? h(date('j M Y', strtotime($photoItem['created_at']))) : '—'; ?></td>
+                                <td style="padding: 10px; white-space: nowrap;">
+                                    <?php if (in_array($rowExt, ['jpg', 'png'])): ?>
+                                    <button type="button" class="convert-btn" data-id="<?php echo $photoItem['id']; ?>" onclick="handleAjaxCompress(this)" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 0; margin-right: 15px; font-weight: normal; font-size: 1rem; text-decoration: underline;">Convert to WebP</button>
                                     <?php endif; ?>
-                                    
-                                    <?php if (in_array(strtolower(pathinfo($photoItem['filename'], PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'])): ?>
-                                    <form method="POST" action="admin.php" style="display:inline; margin-right: 15px;" class="ajax-rotate-form">
-                                        <input type="hidden" name="rotate_photo_id" value="<?php echo $photoItem['id']; ?>">
-                                        <input type="hidden" name="rotate_photo" value="1">
-                                        <button type="button" onclick="handleAjaxRotate(this)" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Rotate 90&deg;</button>
-                                    </form>
+
+                                    <?php if (in_array($rowExt, ['jpg', 'png', 'webp'])): ?>
+                                    <button type="button" data-id="<?php echo $photoItem['id']; ?>" onclick="handleAjaxRotate(this)" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0; margin-right: 15px; font-weight: normal; font-size: 1rem; text-decoration: underline;">Rotate 90&deg;</button>
                                     <?php endif; ?>
-                                    
-                                    <form method="POST" action="admin.php" style="display:inline;" onsubmit="return confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.');">
-                                        <input type="hidden" name="delete_photo_id" value="<?php echo $photoItem['id']; ?>">
-                                        <button type="submit" name="delete_photo" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
-                                    </form>
+
+                                    <button type="button" data-id="<?php echo $photoItem['id']; ?>" onclick="handleDeletePhoto(this)" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                     <div style="margin-top: 20px;">
-                        <button type="submit" name="bulk_compress_photos" style="background: #3b82f6; margin-right: 10px;" onclick="return confirm('Compress the selected photos? Each original will be replaced by a resized WebP copy (the large original file is deleted).');">Compress Selected</button>
+                        <button type="button" id="bulkCompressBtn" style="background: #3b82f6; margin-right: 10px;" onclick="handleBulkCompress()">Compress Selected</button>
                         <button type="submit" name="bulk_delete_photos" style="background: #ef4444;" onclick="return confirm('Are you completely sure you want to permanently delete all selected photos? This cannot be undone.');">Delete Selected Photos</button>
+                        <span id="compressProgress" style="margin-left: 12px; color: #94a3b8;"></span>
                     </div>
                     </form>
                 </div>
@@ -1045,34 +988,202 @@ if (isset($_GET['edit_project'])) {
 
     <script>
         function toggleAllCheckboxes(source) {
-            const checkboxes = document.querySelectorAll('.photo-checkbox');
-            checkboxes.forEach(cb => cb.checked = source.checked);
+            document.querySelectorAll('.photo-checkbox').forEach(cb => {
+                const row = cb.closest('tr');
+                if (!row || row.style.display !== 'none') {
+                    cb.checked = source.checked;
+                } else {
+                    cb.checked = false; // never act on rows hidden by the filters
+                }
+            });
+        }
+
+        function formatBytes(bytes) {
+            if (bytes >= 1048576) {
+                const color = bytes > 3145728 ? '#ef4444' : '#f59e0b';
+                return "<span style='color: " + color + "'>" + (bytes / 1048576).toFixed(2) + " MB</span>";
+            } else if (bytes >= 1024) {
+                return "<span style='color: #22c55e'>" + Math.round(bytes / 1024) + " KB</span>";
+            }
+            return bytes + ' B';
+        }
+
+        function updateRowFilename(tr, newFilename) {
+            const img = tr.querySelector('.preview-img');
+            if (img) img.src = 'uploads/' + newFilename + '?t=' + Date.now();
+            const cell = tr.querySelector('.filename-cell');
+            if (cell) cell.textContent = newFilename.slice(0, 15) + '...';
+        }
+
+        async function compressPhotoRequest(id) {
+            const formData = new FormData();
+            formData.append('ajax_compress_photo', '1');
+            formData.append('photo_id', id);
+            const res = await fetch('admin.php', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) throw new Error('Server error (HTTP ' + res.status + ')');
+            return res.json();
+        }
+
+        function applyCompressResult(tr, data) {
+            updateRowFilename(tr, data.newFilename);
+            tr.dataset.ext = 'webp';
+            const sizeCell = tr.querySelector('.size-cell');
+            if (sizeCell) sizeCell.innerHTML = formatBytes(data.newBytes);
+            const convertBtn = tr.querySelector('.convert-btn');
+            if (convertBtn) convertBtn.remove();
+        }
+
+        async function handleAjaxCompress(btn) {
+            const tr = btn.closest('tr');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Converting...';
+            btn.disabled = true;
+            try {
+                const data = await compressPhotoRequest(btn.dataset.id);
+                if (data.status === 'success') {
+                    applyCompressResult(tr, data);
+                } else {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert('Could not convert this photo: ' + data.message);
+                }
+            } catch (e) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('Could not convert this photo: ' + e.message);
+            }
+        }
+
+        async function handleBulkCompress() {
+            const checked = Array.from(document.querySelectorAll('.photo-checkbox:checked'));
+            const progress = document.getElementById('compressProgress');
+            if (checked.length === 0) {
+                progress.textContent = 'Select some photos first.';
+                return;
+            }
+            if (!confirm('Compress the ' + checked.length + ' selected photo(s)? Each original will be replaced by a resized WebP copy (the large original file is deleted).')) return;
+
+            const bulkBtn = document.getElementById('bulkCompressBtn');
+            bulkBtn.disabled = true;
+            let done = 0, converted = 0, skipped = 0, bytesBefore = 0, bytesAfter = 0;
+            const failed = [];
+
+            for (const cb of checked) {
+                const tr = cb.closest('tr');
+                done++;
+                progress.textContent = 'Compressing ' + done + ' of ' + checked.length + '...';
+                try {
+                    const data = await compressPhotoRequest(cb.value);
+                    if (data.status === 'success') {
+                        converted++;
+                        bytesBefore += data.oldBytes;
+                        bytesAfter += data.newBytes;
+                        applyCompressResult(tr, data);
+                    } else if (data.status === 'skipped') {
+                        skipped++;
+                    } else {
+                        failed.push('#' + cb.value + ' (' + data.message + ')');
+                    }
+                } catch (e) {
+                    failed.push('#' + cb.value + ' (' + e.message + ')');
+                }
+            }
+
+            bulkBtn.disabled = false;
+            let summary = 'Compressed ' + converted + ' photo(s)';
+            if (bytesBefore > 0) {
+                summary += ': ' + (bytesBefore / 1048576).toFixed(1) + ' MB down to ' + (bytesAfter / 1048576).toFixed(1) + ' MB';
+            }
+            if (skipped > 0) summary += '. Skipped ' + skipped + ' already optimized';
+            summary += '.';
+            if (failed.length > 0) summary += ' Failed: ' + failed.join(', ');
+            progress.textContent = summary;
         }
 
         function handleAjaxRotate(btn) {
-            const form = btn.closest('form');
-            const formData = new FormData(form);
+            const tr = btn.closest('tr');
+            const formData = new FormData();
+            formData.append('rotate_photo', '1');
+            formData.append('rotate_photo_id', btn.dataset.id);
             const originalText = btn.innerHTML;
             btn.innerHTML = 'Rotating...';
             btn.disabled = true;
-            
+
             fetch('admin.php', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(() => {
-                const tr = form.closest('tr');
-                const img = tr.querySelector('img');
-                if (img) {
-                    const url = new URL(img.src, window.location.origin);
-                    url.searchParams.set('t', new Date().getTime());
-                    img.src = url.toString();
+            }).then(res => {
+                if (!res.ok) throw new Error('Server error (HTTP ' + res.status + ')');
+                return res.json();
+            }).then(data => {
+                if (data.status === 'success' && data.newFilename) {
+                    updateRowFilename(tr, data.newFilename);
+                } else {
+                    alert('Could not rotate this photo: ' + (data.message || 'unknown error'));
                 }
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-            }).catch(() => {
-                btn.innerHTML = 'Error';
+            }).catch(e => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('Could not rotate this photo: ' + e.message);
             });
+        }
+
+        function handleDeletePhoto(btn) {
+            if (!confirm('Are you completely sure you want to permanently delete this photo? This cannot be undone.')) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'admin.php';
+            const fields = { delete_photo: '1', delete_photo_id: btn.dataset.id };
+            for (const name in fields) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = fields[name];
+                form.appendChild(input);
+            }
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function filterPhotoRows() {
+            const q = document.getElementById('photoFilterSearch').value.trim().toLowerCase();
+            const loc = document.getElementById('photoFilterLocation').value;
+            const fmt = document.getElementById('photoFilterFormat').value;
+            const from = document.getElementById('photoFilterFrom').value;
+            const to = document.getElementById('photoFilterTo').value;
+            const rows = document.querySelectorAll('#photoRowsBody .photo-row');
+            let visible = 0;
+
+            rows.forEach(row => {
+                let show = true;
+                if (q && row.dataset.search.indexOf(q) === -1) show = false;
+                if (loc && row.dataset.location !== loc) show = false;
+                if (fmt && row.dataset.ext !== fmt) show = false;
+                const d = row.dataset.date; // YYYY-MM-DD compares correctly as a string
+                if (from && (!d || d < from)) show = false;
+                if (to && (!d || d > to)) show = false;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+
+            const count = document.getElementById('photoFilterCount');
+            count.textContent = (q || loc || fmt || from || to) ? 'Showing ' + visible + ' of ' + rows.length + ' photos' : '';
+        }
+
+        function clearPhotoFilters() {
+            document.getElementById('photoFilterSearch').value = '';
+            document.getElementById('photoFilterLocation').value = '';
+            document.getElementById('photoFilterFormat').value = '';
+            document.getElementById('photoFilterFrom').value = '';
+            document.getElementById('photoFilterTo').value = '';
+            filterPhotoRows();
         }
 
         // Drag and drop logic for Locations
