@@ -691,6 +691,17 @@ if (isset($_GET['edit_project'])) {
             <div class="alert alert-error">Warning: the PHP GD extension is not enabled on this server, so uploaded photos are being stored at full size with NO compression or resizing. Enable the "gd" extension in php.ini (and restart the web server) to fix this.</div>
         <?php endif; ?>
 
+        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; color: #cbd5e1;">
+            <strong style="color: #60a5fa;">&#128161; Fastest workflow — convert photos BEFORE uploading</strong>
+            <p style="margin: 8px 0 0 0; line-height: 1.6;">
+                On your PC, drag your photos (or a whole folder) onto
+                <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: monospace;">tools\Convert-To-WebP.bat</code>
+                in the website folder. It creates a <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: monospace;">webp</code> folder next to your originals with
+                compressed copies (2560px, quality 80, rotation fixed) &mdash; upload those here and they are stored exactly as-is.
+                No server compression needed, and the "Compress to WebP" checkboxes can stay unticked.
+            </p>
+        </div>
+
         <div class="card">
             <h2>Add Location (Album)</h2>
             <div class="card-content" style="display: none;">
