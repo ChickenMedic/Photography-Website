@@ -361,6 +361,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rotate_photo'])) {
     @set_time_limit(120);
     ensureMemoryLimitMb(512);
     $id = (int)$_POST['rotate_photo_id'];
+    $degrees = (int)($_POST['rotate_degrees'] ?? 90);
+    if (!in_array($degrees, [90, -90, 180, -180])) $degrees = 90;
+    // UI degrees are clockwise; GD's imagerotate() is counter-clockwise
+    $gdAngle = (abs($degrees) === 180) ? 180 : -$degrees;
     $newFilename = null;
 
     $stmt = $pdo->prepare("SELECT filename FROM photos WHERE id = ?");
@@ -375,8 +379,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rotate_photo'])) {
             $image = loadImageForEditing($filepath);
 
             if ($image !== null) {
-                // Rotate 90 degrees clockwise (-90 in GD)
-                $rotated = imagerotate($image, -90, 0);
+                $rotated = imagerotate($image, $gdAngle, 0);
                 imagedestroy($image);
 
                 if ($rotated !== false) {
@@ -590,7 +593,7 @@ if (isset($_GET['edit_project'])) {
     <!-- We will use a basic inline style for admin to keep dependencies low, but could link external -->
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #cbd5e1; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1500px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #334155; padding-bottom: 20px;}
         h1, h2 { color: #f8fafc; margin-top: 0;}
         .card { background: #1e293b; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #334155;}
@@ -877,6 +880,11 @@ if (isset($_GET['edit_project'])) {
 
                 <div style="overflow-x:auto;">
                     <form method="POST" action="admin.php" id="bulkDeleteForm">
+                    <div style="margin-bottom: 16px;">
+                        <button type="button" class="bulk-compress-btn" style="background: #3b82f6; margin-right: 10px;" onclick="handleBulkCompress()">Compress Selected</button>
+                        <button type="submit" name="bulk_delete_photos" style="background: #ef4444;" onclick="return confirm('Are you completely sure you want to permanently delete all selected photos? This cannot be undone.');">Delete Selected Photos</button>
+                        <span class="compress-progress" style="margin-left: 12px; color: #94a3b8;"></span>
+                    </div>
                     <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr style="border-bottom: 1px solid #475569;">
@@ -919,7 +927,7 @@ if (isset($_GET['edit_project'])) {
                                     <img src="uploads/<?php echo h($photoItem['filename']); ?>" alt="preview" class="preview-img" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #475569;">
                                 </td>
                                 <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['id']; ?></td>
-                                <td style="padding: 10px; font-family: monospace; color: #cbd5e1;" class="filename-cell"><?php echo h(substr($photoItem['filename'], 0, 15)) . '...'; ?></td>
+                                <td style="padding: 10px; font-family: monospace; color: #cbd5e1;" class="filename-cell"><?php echo h($photoItem['filename']); ?></td>
                                 <td style="padding: 10px;"><?php echo h($photoItem['title'] ?: 'Untitled'); ?></td>
                                 <td style="padding: 10px; color: #94a3b8;"><?php echo $photoItem['location_name'] ? h($photoItem['location_name']) : '—'; ?></td>
                                 <td style="padding: 10px; font-family: monospace; font-size: 0.9rem;" class="size-cell"><?php echo $sizeStr; ?></td>
@@ -930,7 +938,11 @@ if (isset($_GET['edit_project'])) {
                                     <?php endif; ?>
 
                                     <?php if (in_array($rowExt, ['jpg', 'png', 'webp'])): ?>
-                                    <button type="button" data-id="<?php echo $photoItem['id']; ?>" onclick="handleAjaxRotate(this)" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0; margin-right: 15px; font-weight: normal; font-size: 1rem; text-decoration: underline;">Rotate 90&deg;</button>
+                                    <span style="margin-right: 15px; white-space: nowrap;">Rotate:
+                                        <button type="button" data-id="<?php echo $photoItem['id']; ?>" data-degrees="90" onclick="handleAjaxRotate(this)" title="Rotate 90&deg; clockwise" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0 3px; font-weight: normal; font-size: 1rem; text-decoration: underline;">90&deg;&#8635;</button>
+                                        <button type="button" data-id="<?php echo $photoItem['id']; ?>" data-degrees="-90" onclick="handleAjaxRotate(this)" title="Rotate 90&deg; counter-clockwise" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0 3px; font-weight: normal; font-size: 1rem; text-decoration: underline;">90&deg;&#8634;</button>
+                                        <button type="button" data-id="<?php echo $photoItem['id']; ?>" data-degrees="180" onclick="handleAjaxRotate(this)" title="Rotate 180&deg;" style="background: none; border: none; color: #f59e0b; cursor: pointer; padding: 0 3px; font-weight: normal; font-size: 1rem; text-decoration: underline;">180&deg;</button>
+                                    </span>
                                     <?php endif; ?>
 
                                     <button type="button" data-id="<?php echo $photoItem['id']; ?>" onclick="handleDeletePhoto(this)" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0; font-weight: normal; font-size: 1rem; text-decoration: underline;">Delete</button>
@@ -940,9 +952,9 @@ if (isset($_GET['edit_project'])) {
                         </tbody>
                     </table>
                     <div style="margin-top: 20px;">
-                        <button type="button" id="bulkCompressBtn" style="background: #3b82f6; margin-right: 10px;" onclick="handleBulkCompress()">Compress Selected</button>
+                        <button type="button" class="bulk-compress-btn" style="background: #3b82f6; margin-right: 10px;" onclick="handleBulkCompress()">Compress Selected</button>
                         <button type="submit" name="bulk_delete_photos" style="background: #ef4444;" onclick="return confirm('Are you completely sure you want to permanently delete all selected photos? This cannot be undone.');">Delete Selected Photos</button>
-                        <span id="compressProgress" style="margin-left: 12px; color: #94a3b8;"></span>
+                        <span class="compress-progress" style="margin-left: 12px; color: #94a3b8;"></span>
                     </div>
                     </form>
                 </div>
@@ -1012,7 +1024,7 @@ if (isset($_GET['edit_project'])) {
             const img = tr.querySelector('.preview-img');
             if (img) img.src = 'uploads/' + newFilename + '?t=' + Date.now();
             const cell = tr.querySelector('.filename-cell');
-            if (cell) cell.textContent = newFilename.slice(0, 15) + '...';
+            if (cell) cell.textContent = newFilename;
         }
 
         async function compressPhotoRequest(id) {
@@ -1058,24 +1070,27 @@ if (isset($_GET['edit_project'])) {
             }
         }
 
+        function setCompressProgress(text) {
+            document.querySelectorAll('.compress-progress').forEach(el => el.textContent = text);
+        }
+
         async function handleBulkCompress() {
             const checked = Array.from(document.querySelectorAll('.photo-checkbox:checked'));
-            const progress = document.getElementById('compressProgress');
             if (checked.length === 0) {
-                progress.textContent = 'Select some photos first.';
+                setCompressProgress('Select some photos first.');
                 return;
             }
             if (!confirm('Compress the ' + checked.length + ' selected photo(s)? Each original will be replaced by a resized WebP copy (the large original file is deleted).')) return;
 
-            const bulkBtn = document.getElementById('bulkCompressBtn');
-            bulkBtn.disabled = true;
+            const bulkBtns = document.querySelectorAll('.bulk-compress-btn');
+            bulkBtns.forEach(b => b.disabled = true);
             let done = 0, converted = 0, skipped = 0, bytesBefore = 0, bytesAfter = 0;
             const failed = [];
 
             for (const cb of checked) {
                 const tr = cb.closest('tr');
                 done++;
-                progress.textContent = 'Compressing ' + done + ' of ' + checked.length + '...';
+                setCompressProgress('Compressing ' + done + ' of ' + checked.length + '...');
                 try {
                     const data = await compressPhotoRequest(cb.value);
                     if (data.status === 'success') {
@@ -1093,7 +1108,7 @@ if (isset($_GET['edit_project'])) {
                 }
             }
 
-            bulkBtn.disabled = false;
+            bulkBtns.forEach(b => b.disabled = false);
             let summary = 'Compressed ' + converted + ' photo(s)';
             if (bytesBefore > 0) {
                 summary += ': ' + (bytesBefore / 1048576).toFixed(1) + ' MB down to ' + (bytesAfter / 1048576).toFixed(1) + ' MB';
@@ -1101,7 +1116,7 @@ if (isset($_GET['edit_project'])) {
             if (skipped > 0) summary += '. Skipped ' + skipped + ' already optimized';
             summary += '.';
             if (failed.length > 0) summary += ' Failed: ' + failed.join(', ');
-            progress.textContent = summary;
+            setCompressProgress(summary);
         }
 
         function handleAjaxRotate(btn) {
@@ -1109,8 +1124,9 @@ if (isset($_GET['edit_project'])) {
             const formData = new FormData();
             formData.append('rotate_photo', '1');
             formData.append('rotate_photo_id', btn.dataset.id);
+            formData.append('rotate_degrees', btn.dataset.degrees || '90');
             const originalText = btn.innerHTML;
-            btn.innerHTML = 'Rotating...';
+            btn.innerHTML = '...';
             btn.disabled = true;
 
             fetch('admin.php', {
