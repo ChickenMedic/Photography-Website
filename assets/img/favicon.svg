@@ -6,14 +6,12 @@
       <stop offset="1" stop-color="#ec4899"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#g)"/>
-  <!-- Camera body -->
-  <rect x="9" y="21" width="46" height="29" rx="6" fill="#fff"/>
-  <!-- Viewfinder bump -->
-  <path d="M23 21 L26.5 14 L37.5 14 L41 21 Z" fill="#fff"/>
-  <!-- Lens -->
-  <circle cx="32" cy="35.5" r="9.5" fill="url(#g)"/>
-  <circle cx="32" cy="35.5" r="4.5" fill="#fff" opacity="0.85"/>
-  <!-- Flash dot -->
-  <circle cx="48.5" cy="27.5" r="2.2" fill="#a855f7"/>
+  <g fill="none" stroke="url(#g)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Camera body with viewfinder bump -->
+    <path d="M6 24 a6 6 0 0 1 6 -6 h8 l4 -7 h16 l4 7 h8 a6 6 0 0 1 6 6 v22 a6 6 0 0 1 -6 6 H12 a6 6 0 0 1 -6 -6 Z"/>
+    <!-- Lens -->
+    <circle cx="32" cy="35" r="10"/>
+    <!-- Flash dot -->
+    <path d="M50 26.5 h0.01"/>
+  </g>
 </svg>
