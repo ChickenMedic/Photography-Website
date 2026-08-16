@@ -1,12 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6366f1"/>
-      <stop offset="0.5" stop-color="#a855f7"/>
-      <stop offset="1" stop-color="#ec4899"/>
-    </linearGradient>
-  </defs>
-  <g fill="none" stroke="url(#g)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+  <style>
+    g { stroke: #111111; }
+    @media (prefers-color-scheme: dark) { g { stroke: #f5f5f5; } }
+  </style>
+  <g fill="none" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
     <!-- Zoomed-in aperture: blades converge on a large central opening,
          outer ring just clips the corners -->
     <circle cx="32" cy="32" r="40"/>
