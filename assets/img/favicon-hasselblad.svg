@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="0.5" stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#g)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Waist-level finder -->
+    <rect x="22" y="6" width="20" height="10" rx="2"/>
+    <!-- Boxy body -->
+    <rect x="12" y="16" width="40" height="38" rx="4"/>
+    <!-- Lens barrel -->
+    <circle cx="32" cy="35" r="12"/>
+    <circle cx="32" cy="35" r="5.5"/>
+    <!-- Winding crank -->
+    <path d="M52 44 h6"/>
+  </g>
+</svg>

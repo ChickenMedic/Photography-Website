@@ -434,7 +434,24 @@ document.addEventListener('DOMContentLoaded', () => {
         showNextFeaturedPhoto();
     }
 
-    // 8. Code Block Copy Buttons
+    // 8. Rotating Favicon (cycles through hairline camera designs)
+    const faviconLink = document.querySelector('link[rel="icon"]');
+    if (faviconLink) {
+        const cameraIcons = [
+            'assets/img/favicon.svg',            // SLR
+            'assets/img/favicon-tlr.svg',        // Twin-lens reflex
+            'assets/img/favicon-hasselblad.svg', // Hasselblad 500
+            'assets/img/favicon-leica.svg',      // Leica rangefinder
+            'assets/img/favicon-largeformat.svg' // Large format bellows
+        ];
+        let cameraIconIndex = 0;
+        setInterval(() => {
+            cameraIconIndex = (cameraIconIndex + 1) % cameraIcons.length;
+            faviconLink.href = cameraIcons[cameraIconIndex];
+        }, 6000);
+    }
+
+    // 9. Code Block Copy Buttons
     const preBlocks = document.querySelectorAll('pre');
     preBlocks.forEach((pre) => {
         // Create the button
