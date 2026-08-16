@@ -434,21 +434,61 @@ document.addEventListener('DOMContentLoaded', () => {
         showNextFeaturedPhoto();
     }
 
-    // 8. Rotating Favicon (cycles through hairline camera designs)
+    // 8. Rotating Favicon (crossfades through photography-themed icons)
     const faviconLink = document.querySelector('link[rel="icon"]');
     if (faviconLink) {
         const cameraIcons = [
             'assets/img/favicon.svg',            // SLR
             'assets/img/favicon-tlr.svg',        // Twin-lens reflex
             'assets/img/favicon-hasselblad.svg', // Hasselblad 500
-            'assets/img/favicon-leica.svg',      // Leica rangefinder
-            'assets/img/favicon-largeformat.svg' // Large format bellows
+            'assets/img/favicon-compact.svg',    // Point and shoot
+            'assets/img/favicon-film.svg',       // Film canister
+            'assets/img/favicon-flash.svg',      // Flash bolt
+            'assets/img/favicon-aperture.svg',   // Aperture blades
+            'assets/img/favicon-dial.svg'        // PASM mode dial
         ];
-        let cameraIconIndex = 0;
-        setInterval(() => {
-            cameraIconIndex = (cameraIconIndex + 1) % cameraIcons.length;
-            faviconLink.href = cameraIcons[cameraIconIndex];
-        }, 6000);
+
+        const iconImages = cameraIcons.map(src => {
+            const img = new Image();
+            img.src = src;
+            return img;
+        });
+
+        const favCanvas = document.createElement('canvas');
+        favCanvas.width = 64;
+        favCanvas.height = 64;
+        const favCtx = favCanvas.getContext('2d');
+
+        let currentIcon = 0;
+
+        function transitionFavicon() {
+            const next = (currentIcon + 1) % iconImages.length;
+            const fromImg = iconImages[currentIcon];
+            const toImg = iconImages[next];
+            currentIcon = next;
+
+            // If either image isn't ready, swap without the fade
+            if (!fromImg.complete || !toImg.complete || fromImg.naturalWidth === 0 || toImg.naturalWidth === 0) {
+                faviconLink.href = cameraIcons[next];
+                return;
+            }
+
+            const steps = 8;
+            let step = 0;
+            const fade = setInterval(() => {
+                step++;
+                const t = step / steps;
+                favCtx.clearRect(0, 0, 64, 64);
+                favCtx.globalAlpha = 1 - t;
+                favCtx.drawImage(fromImg, 0, 0, 64, 64);
+                favCtx.globalAlpha = t;
+                favCtx.drawImage(toImg, 0, 0, 64, 64);
+                faviconLink.href = favCanvas.toDataURL('image/png');
+                if (step >= steps) clearInterval(fade);
+            }, 60);
+        }
+
+        setInterval(transitionFavicon, 6000);
     }
 
     // 9. Code Block Copy Buttons

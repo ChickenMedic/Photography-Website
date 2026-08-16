@@ -7,11 +7,13 @@
     </linearGradient>
   </defs>
   <g fill="none" stroke="url(#g)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-    <!-- Camera body with viewfinder bump -->
-    <path d="M6 24 a6 6 0 0 1 6 -6 h8 l4 -7 h16 l4 7 h8 a6 6 0 0 1 6 6 v22 a6 6 0 0 1 -6 6 H12 a6 6 0 0 1 -6 -6 Z"/>
-    <!-- Lens -->
-    <circle cx="32" cy="35" r="10"/>
-    <!-- Flash dot -->
-    <path d="M50 26.5 h0.01"/>
+    <!-- Aperture ring and blades -->
+    <circle cx="32" cy="32" r="25"/>
+    <path d="M37.8 22 L52.1 46.9"/>
+    <path d="M26.2 22 L54.9 22"/>
+    <path d="M20.5 32 L34.8 7.2"/>
+    <path d="M26.2 42 L11.9 17.2"/>
+    <path d="M37.8 42 L9.1 42"/>
+    <path d="M43.6 32 L29.2 56.9"/>
   </g>
 </svg>

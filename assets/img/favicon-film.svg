@@ -7,11 +7,11 @@
     </linearGradient>
   </defs>
   <g fill="none" stroke="url(#g)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-    <!-- Camera body with viewfinder bump -->
-    <path d="M6 24 a6 6 0 0 1 6 -6 h8 l4 -7 h16 l4 7 h8 a6 6 0 0 1 6 6 v22 a6 6 0 0 1 -6 6 H12 a6 6 0 0 1 -6 -6 Z"/>
-    <!-- Lens -->
-    <circle cx="32" cy="35" r="10"/>
-    <!-- Flash dot -->
-    <path d="M50 26.5 h0.01"/>
+    <!-- Canister cap -->
+    <rect x="12" y="8" width="26" height="6" rx="2"/>
+    <!-- Canister body -->
+    <rect x="15" y="14" width="20" height="42" rx="3"/>
+    <!-- Film leader -->
+    <path d="M35 32 h17 v9 h-17"/>
   </g>
 </svg>
