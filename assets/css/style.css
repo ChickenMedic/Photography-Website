@@ -999,7 +999,7 @@ img {
 }
 
 .gallery-layout-5 .photo-item:nth-child(5n+3) img {
-    height: 366px; /* 410 - 2x22 */
+    height: 244px; /* 3:2 landscape window */
 }
 
 .gallery-layout-5 .photo-item:nth-child(6n+2) {
@@ -1008,7 +1008,7 @@ img {
 }
 
 .gallery-layout-5 .photo-item:nth-child(6n+2) img {
-    height: 310px; /* 350 - 2x20 */
+    height: 232px; /* 4:3 landscape window */
 }
 
 @media(max-width: 600px) {
