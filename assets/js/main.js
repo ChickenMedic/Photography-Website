@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'assets/img/favicon-film.svg',       // Film canister
             'assets/img/favicon-flash.svg',      // Flash bolt
             'assets/img/favicon-aperture.svg',   // Aperture blades
-            'assets/img/favicon-dial.svg'        // PASM mode dial
+            'assets/img/favicon-pasm.svg'        // PASM letters
         ];
 
         const iconImages = cameraIcons.map(src => {
@@ -473,16 +473,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const steps = 8;
+            const steps = 10;
+            const travel = 28; // px of vertical movement during the swap
             let step = 0;
             const fade = setInterval(() => {
                 step++;
                 const t = step / steps;
+                const e = t * t * (3 - 2 * t); // smoothstep easing
                 favCtx.clearRect(0, 0, 64, 64);
-                favCtx.globalAlpha = 1 - t;
-                favCtx.drawImage(fromImg, 0, 0, 64, 64);
-                favCtx.globalAlpha = t;
-                favCtx.drawImage(toImg, 0, 0, 64, 64);
+                // Old icon rises and fades out
+                favCtx.globalAlpha = 1 - e;
+                favCtx.drawImage(fromImg, 0, -travel * e, 64, 64);
+                // New icon falls in from above and fades in
+                favCtx.globalAlpha = e;
+                favCtx.drawImage(toImg, 0, -travel * (1 - e), 64, 64);
                 faviconLink.href = favCanvas.toDataURL('image/png');
                 if (step >= steps) clearInterval(fade);
             }, 60);
