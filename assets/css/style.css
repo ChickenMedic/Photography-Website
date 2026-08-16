@@ -931,11 +931,12 @@ img {
 
 .gallery-layout-5 .photo-item {
     background: #fff;
-    padding: 20px 20px 80px 20px;
+    /* Even white frame all around; double at the bottom for the polaroid strip */
+    padding: 6% 6% 12%;
     border-radius: 4px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    width: 450px;
-    height: 540px;
+    width: 320px;
+    max-width: 85vw;
     transition: transform 0.4s ease, z-index 0s;
 }
 
@@ -960,26 +961,24 @@ img {
 .gallery-layout-5 .overlay-content h3 {
     color: #121212;
     font-family: 'Dancing Script', cursive;
-    font-size: 2rem;
+    font-size: 1.4rem;
+    line-height: 1;
+    transform: translateY(0);
 }
 
 .gallery-layout-5 .overlay-content h3.photo-quote {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     line-height: 1.2;
 }
 
 .gallery-layout-5 .overlay {
     background: none;
     opacity: 1;
-    padding: 15px;
+    /* Keeps the caption inside the bottom strip, scaling with the frame */
+    padding: 3% 6%;
 }
 
 /* Polaroid size variations */
-.gallery-layout-5 .photo-item {
-    width: 320px;
-    max-width: 85vw;
-}
-
 .gallery-layout-5 .photo-item img {
     height: 290px;
     object-fit: cover;

@@ -45,6 +45,7 @@ if (!isset($_SESSION['user_id'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - <?php echo SITE_NAME; ?></title>
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         body { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; color: #fff; font-family: 'Inter', sans-serif;}
@@ -550,6 +551,7 @@ if (isset($_GET['edit_project'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - <?php echo h(SITE_NAME); ?></title>
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
     <!-- Summernote WYSIWYG Editor (Free, No API Key, Drag & Drop Images) -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">

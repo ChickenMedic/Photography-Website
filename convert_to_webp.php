@@ -65,6 +65,7 @@ if (isset($_POST['run_conversion'])) {
 <head>
     <meta charset="UTF-8">
     <title>Bulk WebP Optimizer</title>
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #cbd5e1; text-align: center; padding-top: 10vh; margin: 0; }
         h1 { color: #f8fafc; margin-bottom: 5px; }
