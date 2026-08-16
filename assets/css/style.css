@@ -932,7 +932,7 @@ img {
 .gallery-layout-5 .photo-item {
     background: #fff;
     /* Even white frame all around; double at the bottom for the polaroid strip */
-    padding: 6% 6% 12%;
+    padding: 18px 18px 36px;
     border-radius: 4px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     width: 320px;
@@ -974,49 +974,53 @@ img {
 .gallery-layout-5 .overlay {
     background: none;
     opacity: 1;
-    /* Keeps the caption inside the bottom strip, scaling with the frame */
-    padding: 3% 6%;
+    /* Keeps the caption inside the bottom strip */
+    padding: 8px 18px;
 }
 
-/* Polaroid size variations */
+/* Polaroid size variations: square photo window, frame scaled to each size */
 .gallery-layout-5 .photo-item img {
-    height: 290px;
+    height: 284px; /* 320 - 2x18 frame */
     object-fit: cover;
 }
 
 .gallery-layout-5 .photo-item:nth-child(4n+1) {
     width: 250px;
+    padding: 14px 14px 28px;
 }
 
 .gallery-layout-5 .photo-item:nth-child(4n+1) img {
-    height: 225px;
+    height: 222px; /* 250 - 2x14 */
 }
 
 .gallery-layout-5 .photo-item:nth-child(5n+3) {
     width: 410px;
+    padding: 22px 22px 44px;
 }
 
 .gallery-layout-5 .photo-item:nth-child(5n+3) img {
-    height: 370px;
+    height: 366px; /* 410 - 2x22 */
 }
 
 .gallery-layout-5 .photo-item:nth-child(6n+2) {
     width: 350px;
+    padding: 20px 20px 40px;
 }
 
 .gallery-layout-5 .photo-item:nth-child(6n+2) img {
-    height: 315px;
+    height: 310px; /* 350 - 2x20 */
 }
 
 @media(max-width: 600px) {
     .gallery-layout-5 .photo-item,
     .gallery-layout-5 .photo-item:nth-child(n) {
-        width: 75vw;
+        width: 300px;
+        padding: 16px 16px 32px;
     }
 
     .gallery-layout-5 .photo-item img,
     .gallery-layout-5 .photo-item:nth-child(n) img {
-        height: 68vw;
+        height: 268px; /* 300 - 2x16 */
     }
 }
 
