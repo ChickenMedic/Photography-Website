@@ -444,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
             'assets/img/favicon-compact.svg',    // Point and shoot
             'assets/img/favicon-film.svg',       // Film canister
             'assets/img/favicon-flash.svg',      // Flash bolt
-            'assets/img/favicon-aperture.svg',   // Aperture blades
             'assets/img/favicon-pasm.svg'        // PASM letters
         ];
 
