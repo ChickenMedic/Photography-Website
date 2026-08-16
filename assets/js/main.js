@@ -41,14 +41,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxDesc = document.getElementById('lightbox-desc');
     const closeBtn = document.querySelector('.close-btn');
 
-    function openLightbox(imgSrc, title, desc) {
+    function openLightbox(imgSrc, title, desc, randomMode = false) {
         if (!lightbox || !lightboxImg) return;
         lightboxImg.src = imgSrc;
         lightboxTitle.textContent = title;
         lightboxDesc.textContent = desc;
+        lightbox.classList.toggle('random-mode', randomMode);
         lightbox.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
+
+    // Random-mode arrows: flip to another random photo
+    const lightboxContent = document.querySelector('.lightbox-content');
+    const lightboxPrev = document.getElementById('lightbox-prev');
+    const lightboxNext = document.getElementById('lightbox-next');
+    let lightboxFlipping = false;
+
+    function flipToRandomPhoto(direction) {
+        if (lightboxFlipping || !lightboxContent) return;
+        if (typeof allPhotosDB === 'undefined' || allPhotosDB.length === 0) return;
+        lightboxFlipping = true;
+
+        // Pick a random photo, avoiding an immediate repeat
+        let idx = Math.floor(Math.random() * allPhotosDB.length);
+        if (allPhotosDB.length > 1 && lightboxImg.getAttribute('src') === 'uploads/' + allPhotosDB[idx].filename) {
+            idx = (idx + 1) % allPhotosDB.length;
+        }
+        const photo = allPhotosDB[idx];
+
+        // Preload so the swap mid-flip is instant
+        const preloaded = new Image();
+        preloaded.src = 'uploads/' + photo.filename;
+
+        const outClass = direction === 'left' ? 'lb-flip-out-right' : 'lb-flip-out-left';
+        const inClass = direction === 'left' ? 'lb-flip-in-left' : 'lb-flip-in-right';
+
+        lightboxContent.classList.add(outClass);
+        setTimeout(() => {
+            lightboxImg.src = preloaded.src;
+            lightboxTitle.textContent = photo.title || '';
+            lightboxDesc.textContent = photo.description || '';
+            lightboxContent.classList.remove(outClass);
+            lightboxContent.classList.add(inClass);
+            setTimeout(() => {
+                lightboxContent.classList.remove(inClass);
+                lightboxFlipping = false;
+            }, 400);
+        }, 400);
+    }
+
+    if (lightboxPrev) lightboxPrev.addEventListener('click', () => flipToRandomPhoto('left'));
+    if (lightboxNext) lightboxNext.addEventListener('click', () => flipToRandomPhoto('right'));
 
     // Event delegation for masonry items (both static and dynamic)
     document.body.addEventListener('click', (e) => {
@@ -92,10 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Close on Escape key
+    // Keyboard: Escape closes, arrows flip in random mode
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && lightbox && lightbox.classList.contains('active')) {
+        if (!lightbox || !lightbox.classList.contains('active')) return;
+        if (e.key === 'Escape') {
             closeLightbox();
+        } else if (lightbox.classList.contains('random-mode')) {
+            if (e.key === 'ArrowLeft') flipToRandomPhoto('left');
+            if (e.key === 'ArrowRight') flipToRandomPhoto('right');
         }
     });
 
@@ -232,7 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
             openLightbox(
                 'uploads/' + randomPhoto.filename,
                 randomPhoto.title || '',
-                randomPhoto.description || ''
+                randomPhoto.description || '',
+                true // random mode: show flip arrows
             );
         });
     }
@@ -289,8 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Apply Random Layout (Skip 3 - Horizontal Scroll)
-            const allowedLayouts = [1, 2, 4, 5, 6, 7, 8];
+            // Apply Random Layout (Skip 3 - Horizontal Scroll, 6 - Circular Avatars)
+            const allowedLayouts = [1, 2, 4, 5, 7, 8];
             const randomLayoutNum = allowedLayouts[Math.floor(Math.random() * allowedLayouts.length)];
             galleryContainer.className = 'gallery-container gallery-layout-' + randomLayoutNum;
 

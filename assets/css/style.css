@@ -974,6 +974,53 @@ img {
     padding: 15px;
 }
 
+/* Polaroid size variations */
+.gallery-layout-5 .photo-item {
+    width: 320px;
+    max-width: 85vw;
+}
+
+.gallery-layout-5 .photo-item img {
+    height: 290px;
+    object-fit: cover;
+}
+
+.gallery-layout-5 .photo-item:nth-child(4n+1) {
+    width: 250px;
+}
+
+.gallery-layout-5 .photo-item:nth-child(4n+1) img {
+    height: 225px;
+}
+
+.gallery-layout-5 .photo-item:nth-child(5n+3) {
+    width: 410px;
+}
+
+.gallery-layout-5 .photo-item:nth-child(5n+3) img {
+    height: 370px;
+}
+
+.gallery-layout-5 .photo-item:nth-child(6n+2) {
+    width: 350px;
+}
+
+.gallery-layout-5 .photo-item:nth-child(6n+2) img {
+    height: 315px;
+}
+
+@media(max-width: 600px) {
+    .gallery-layout-5 .photo-item,
+    .gallery-layout-5 .photo-item:nth-child(n) {
+        width: 75vw;
+    }
+
+    .gallery-layout-5 .photo-item img,
+    .gallery-layout-5 .photo-item:nth-child(n) img {
+        height: 68vw;
+    }
+}
+
 /* Layout 6: Circular Avatars */
 .gallery-layout-6 {
     display: grid;
@@ -1232,6 +1279,114 @@ img {
 .lightbox-caption p {
     color: var(--text-secondary);
     max-width: 600px;
+}
+
+/* Lightbox Arrows (Surprise Me random mode only) */
+.lightbox-arrow {
+    display: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 60px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    z-index: 2001;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.lightbox.random-mode .lightbox-arrow {
+    display: flex;
+}
+
+.lightbox-arrow:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.lightbox-arrow-left {
+    left: 30px;
+}
+
+.lightbox-arrow-right {
+    right: 30px;
+}
+
+@media(max-width: 768px) {
+    .lightbox-arrow {
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
+    }
+
+    .lightbox-arrow-left {
+        left: 10px;
+    }
+
+    .lightbox-arrow-right {
+        right: 10px;
+    }
+}
+
+/* Lightbox flip transitions for random mode */
+.lb-flip-out-left {
+    animation: lbFlipOutLeft 0.4s ease-in forwards;
+}
+
+@keyframes lbFlipOutLeft {
+    to {
+        transform: perspective(1200px) rotateY(-90deg);
+        opacity: 0;
+    }
+}
+
+.lb-flip-out-right {
+    animation: lbFlipOutRight 0.4s ease-in forwards;
+}
+
+@keyframes lbFlipOutRight {
+    to {
+        transform: perspective(1200px) rotateY(90deg);
+        opacity: 0;
+    }
+}
+
+.lb-flip-in-right {
+    animation: lbFlipInRight 0.4s ease-out;
+}
+
+@keyframes lbFlipInRight {
+    from {
+        transform: perspective(1200px) rotateY(90deg);
+        opacity: 0;
+    }
+
+    to {
+        transform: perspective(1200px) rotateY(0deg);
+        opacity: 1;
+    }
+}
+
+.lb-flip-in-left {
+    animation: lbFlipInLeft 0.4s ease-out;
+}
+
+@keyframes lbFlipInLeft {
+    from {
+        transform: perspective(1200px) rotateY(-90deg);
+        opacity: 0;
+    }
+
+    to {
+        transform: perspective(1200px) rotateY(0deg);
+        opacity: 1;
+    }
 }
 
 /* Surprise Me Button Animation */

@@ -369,6 +369,8 @@ endif; ?>
     <!-- Lightbox Modal -->
     <div id="lightbox" class="lightbox">
         <button class="close-btn">&times;</button>
+        <button id="lightbox-prev" class="lightbox-arrow lightbox-arrow-left" aria-label="Previous random photo">&#10094;</button>
+        <button id="lightbox-next" class="lightbox-arrow lightbox-arrow-right" aria-label="Next random photo">&#10095;</button>
         <div class="lightbox-content">
             <img id="lightbox-img" src="" alt="">
             <div class="lightbox-caption">
